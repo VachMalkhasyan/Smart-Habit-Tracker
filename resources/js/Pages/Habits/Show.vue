@@ -255,6 +255,10 @@ const props = defineProps({
     todayCompletion: Object,
 })
 
+const isDark = computed(() =>
+    document.documentElement.classList.contains('dark')
+)
+
 const confirmDelete = ref(false)
 
 // Progress
@@ -301,11 +305,12 @@ const statusClass = (s) => ({
 }[s] ?? '')
 
 // Chart
-const areaChartOptions = {
+const areaChartOptions = computed(() => ({
     chart: { toolbar: { show: false }, sparkline: { enabled: false } },
     stroke: { curve: 'smooth', width: 2 },
     fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
     dataLabels: { enabled: false },
+    theme: { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.completions?.map(c => dayjs(c.completed_at).format('MMM D')) ?? [],
         labels: { show: false },
@@ -313,10 +318,10 @@ const areaChartOptions = {
         axisTicks: { show: false },
     },
     yaxis: { labels: { style: { colors: '#9ca3af' } } },
-    grid: { borderColor: '#f3f4f6', strokeDashArray: 4 },
+    grid: { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1'],
-    tooltip: { theme: 'light' },
-}
+    tooltip: { theme: isDark.value ? 'dark' : 'light' },
+}))
 
 const areaChartSeries = [{
     name: 'Completions',

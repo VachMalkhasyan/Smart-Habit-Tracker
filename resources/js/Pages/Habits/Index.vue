@@ -18,11 +18,11 @@
             <div class="relative flex-1 min-w-[200px] max-w-sm">
                 <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input v-model="search" type="text" placeholder="Search habits..."
-                       class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                       class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
             </div>
 
             <select v-model="statusFilter"
-                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                 <option value="">All Status</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -31,13 +31,13 @@
             </select>
 
             <select v-model="categoryFilter"
-                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                 <option value="">All Categories</option>
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
             </select>
 
             <select v-model="priorityFilter"
-                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                    class="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-white dark:bg-gray-900 dark:text-gray-100 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                 <option value="">All Priorities</option>
                 <option value="1">High</option>
                 <option value="2">Medium</option>
@@ -277,10 +277,10 @@ const priorityDot = (p) => ({
 }[p] ?? 'w-2 h-2 rounded-full bg-gray-300 shrink-0')
 
 const statusClass = (s) => ({
-    active:    'bg-green-100 text-green-700',
-    inactive:  'bg-gray-100 text-gray-500',
-    completed: 'bg-blue-100 text-blue-700',
-    paused:    'bg-yellow-100 text-yellow-700',
+    active:    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    inactive:  'bg-gray-100 text-gray-500 dark:bg-gray-800/50 dark:text-gray-400',
+    completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+    paused:    'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }[s] ?? '')
 
 // Navigation

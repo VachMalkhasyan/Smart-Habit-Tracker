@@ -77,8 +77,8 @@
                             </label>
                             <input v-model="form.name" type="text"
                                    placeholder="e.g. Read 30 minutes"
-                                   class="w-full px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                   :class="errors.name ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'" />
+                                   class="w-full px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-900 dark:text-gray-100"
+                                   :class="errors.name ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700'" />
                             <p v-if="errors.name" class="text-xs text-red-400 mt-1">{{ errors.name }}</p>
                         </div>
 
@@ -90,7 +90,7 @@
                             <textarea v-model="form.description"
                                       placeholder="What is this habit about?"
                                       rows="3"
-                                      class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none">
+                                      class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none">
                             </textarea>
                         </div>
 
@@ -104,7 +104,7 @@
                                         'px-3 py-1.5 rounded-xl text-sm border transition-all',
                                         form.category_id === cat.id
                                             ? 'bg-indigo-600 text-white border-indigo-600'
-                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                                            : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600'
                                     ]">
                                     {{ cat.name }}
                                 </button>
@@ -128,10 +128,10 @@
                             <div class="flex gap-2">
                                 <input v-model="form.goal" type="number" min="1"
                                        placeholder="30"
-                                       class="w-28 px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                       :class="errors.goal ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'" />
+                                       class="w-28 px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-900 dark:text-gray-100"
+                                       :class="errors.goal ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700'" />
                                 <select v-model="form.goal_unit"
-                                        class="flex-1 px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                        class="flex-1 px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                                     <option value="days">Days</option>
                                     <option value="weeks">Weeks</option>
                                     <option value="months">Months</option>
@@ -168,8 +168,8 @@
                                 Start Date <span class="text-red-400">*</span>
                             </label>
                             <input v-model="form.start_date" type="date"
-                                   class="w-full px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                   :class="errors.start_date ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'" />
+                                   class="w-full px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-900 dark:text-gray-100"
+                                   :class="errors.start_date ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700'" />
                             <p v-if="errors.start_date" class="text-xs text-red-400 mt-1">{{ errors.start_date }}</p>
                         </div>
 
@@ -181,10 +181,10 @@
                             <div class="flex gap-2">
                                 <input v-model="form.deadline_value" type="number" min="1"
                                        placeholder="2"
-                                       class="w-28 px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                                       :class="errors.deadline_value ? 'border-red-400' : 'border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'" />
+                                       class="w-28 px-4 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-gray-900 dark:text-gray-100"
+                                       :class="errors.deadline_value ? 'border-red-400 dark:border-red-600' : 'border-gray-200 dark:border-gray-700'" />
                                 <select v-model="form.deadline_unit"
-                                        class="flex-1 px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                        class="flex-1 px-3 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                                     <option value="days">Days</option>
                                     <option value="weeks">Weeks</option>
                                     <option value="months">Months</option>
@@ -214,7 +214,7 @@
                                         @click="form.priority = p.value"
                                         :class="[
                                         'flex-1 py-2.5 rounded-xl border text-sm font-medium transition-all',
-                                        form.priority === p.value ? p.activeClass : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                        form.priority === p.value ? p.activeClass : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600'
                                     ]">
                                     {{ p.label }}
                                 </button>
@@ -229,7 +229,7 @@
                                         @click="form.status = s.value"
                                         :class="[
                                         'px-4 py-2 rounded-xl border text-sm font-medium transition-all capitalize',
-                                        form.status === s.value ? s.activeClass : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                                        form.status === s.value ? s.activeClass : 'border-gray-200 text-gray-500 hover:border-gray-300 dark:border-gray-700 dark:text-gray-400 dark:hover:border-gray-600'
                                     ]">
                                     {{ s.label }}
                                 </button>
@@ -337,17 +337,17 @@ const decrement = () => form.repeat_count > 1 && form.repeat_count--
 
 // Priority options
 const priorities = [
-    { value: 1, label: '🔴 High',   activeClass: 'border-red-400 bg-red-50 text-red-600' },
-    { value: 2, label: '🟡 Medium', activeClass: 'border-yellow-400 bg-yellow-50 text-yellow-600' },
-    { value: 3, label: '🟢 Low',    activeClass: 'border-green-400 bg-green-50 text-green-600' },
+    { value: 1, label: '🔴 High',   activeClass: 'border-red-400 bg-red-50 text-red-600 dark:border-red-500/50 dark:bg-red-900/30 dark:text-red-400' },
+    { value: 2, label: '🟡 Medium', activeClass: 'border-yellow-400 bg-yellow-50 text-yellow-600 dark:border-yellow-500/50 dark:bg-yellow-900/30 dark:text-yellow-400' },
+    { value: 3, label: '🟢 Low',    activeClass: 'border-green-400 bg-green-50 text-green-600 dark:border-green-500/50 dark:bg-green-900/30 dark:text-green-400' },
 ]
 
 // Status options
 const statuses = [
-    { value: 'active',    label: 'Active',    activeClass: 'border-green-400 bg-green-50 text-green-700' },
-    { value: 'paused',    label: 'Paused',    activeClass: 'border-yellow-400 bg-yellow-50 text-yellow-700' },
-    { value: 'inactive',  label: 'Inactive',  activeClass: 'border-gray-400 bg-gray-50 text-gray-700' },
-    { value: 'completed', label: 'Completed', activeClass: 'border-blue-400 bg-blue-50 text-blue-700' },
+    { value: 'active',    label: 'Active',    activeClass: 'border-green-400 bg-green-50 text-green-700 dark:border-green-500/50 dark:bg-green-900/30 dark:text-green-400' },
+    { value: 'paused',    label: 'Paused',    activeClass: 'border-yellow-400 bg-yellow-50 text-yellow-700 dark:border-yellow-500/50 dark:bg-yellow-900/30 dark:text-yellow-400' },
+    { value: 'inactive',  label: 'Inactive',  activeClass: 'border-gray-400 bg-gray-50 text-gray-700 dark:border-gray-500/50 dark:bg-gray-800/50 dark:text-gray-400' },
+    { value: 'completed', label: 'Completed', activeClass: 'border-blue-400 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-900/30 dark:text-blue-400' },
 ]
 
 // Submit

@@ -142,6 +142,10 @@ const props = defineProps({
     todayCompleted: Number,
 })
 
+const isDark = computed(() =>
+    document.documentElement.classList.contains('dark')
+)
+
 // Stats cards
 const stats = computed(() => [
     {
@@ -196,10 +200,13 @@ const priorityClass = (p) => ({
 const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
 
 // Chart
-const chartOptions = {
+const chartOptions = computed(() => ({
     chart: { toolbar: { show: false }, sparkline: { enabled: false } },
     plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
     dataLabels: { enabled: false },
+    theme: {
+        mode: isDark.value ? 'dark' : 'light'
+    },
     xaxis: {
         categories: props.weeklyData?.map(d => d.day) ?? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         labels: { style: { fontSize: '11px', colors: '#9ca3af' } },
@@ -207,10 +214,10 @@ const chartOptions = {
         axisTicks: { show: false },
     },
     yaxis: { labels: { style: { colors: '#9ca3af' } } },
-    grid: { borderColor: '#f3f4f6', strokeDashArray: 4 },
+    grid: { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1'],
-    tooltip: { theme: 'light' },
-}
+    tooltip: { theme: isDark.value ? 'dark' : 'light' },
+}))
 
 const chartSeries = [{
     name: 'Completed',

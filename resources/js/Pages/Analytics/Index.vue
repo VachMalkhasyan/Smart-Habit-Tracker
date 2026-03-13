@@ -311,11 +311,12 @@ const isDark = computed(() =>
     document.documentElement.classList.contains('dark')
 )
 
-const monthlyChartOptions = {
+const monthlyChartOptions = computed(() => ({
     chart:       { toolbar: { show: false } },
     stroke:      { curve: 'smooth', width: 2 },
     fill:        { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
     dataLabels:  { enabled: false },
+    theme:       { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.monthlyTrend?.map(d => d.month) ?? [],
         labels:     { style: { colors: '#9ca3af' } },
@@ -323,20 +324,21 @@ const monthlyChartOptions = {
         axisTicks:  { show: false },
     },
     yaxis:  { labels: { style: { colors: '#9ca3af' } } },
-    grid:   { borderColor: '#f3f4f6', strokeDashArray: 4 },
+    grid:   { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1'],
-    tooltip: { theme: 'light' },
-}
+    tooltip: { theme: isDark.value ? 'dark' : 'light' },
+}))
 
 const monthlyChartSeries = [{
     name: 'Completions',
     data: props.monthlyTrend?.map(d => d.total) ?? [],
 }]
 
-const streakChartOptions = {
+const streakChartOptions = computed(() => ({
     chart:      { toolbar: { show: false } },
     plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
     dataLabels: { enabled: false },
+    theme:      { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.habitStats?.map(h => h.name.length > 12 ? h.name.substring(0, 12) + '…' : h.name) ?? [],
         labels:     { style: { colors: '#9ca3af', fontSize: '11px' } },
@@ -344,11 +346,11 @@ const streakChartOptions = {
         axisTicks:  { show: false },
     },
     yaxis:  { labels: { style: { colors: '#9ca3af' } } },
-    grid:   { borderColor: '#f3f4f6', strokeDashArray: 4 },
+    grid:   { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1', '#e0e7ff'],
     legend: { labels: { colors: '#9ca3af' } },
-    tooltip: { theme: 'light' },
-}
+    tooltip: { theme: isDark.value ? 'dark' : 'light' },
+}))
 
 const streakChartSeries = [
     { name: 'Current Streak',  data: props.habitStats?.map(h => h.current_streak)  ?? [] },

@@ -91,7 +91,7 @@
                             Working on:
                         </label>
                         <select v-model="selectedHabit"
-                                class="w-full max-w-xs mx-auto block text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                class="w-full max-w-xs mx-auto block text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                             <option value="">— No habit —</option>
                             <option v-for="h in habits" :key="h.id" :value="h.id">
                                 {{ h.name }}
@@ -114,7 +114,7 @@
                             <input v-model.number="settings.workMinutes" type="number"
                                    min="1" max="120" :disabled="isRunning"
                                    @change="applySettings"
-                                   class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-50" />
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 disabled:opacity-50" />
                         </div>
                         <div>
                             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1.5 block">
@@ -123,7 +123,7 @@
                             <input v-model.number="settings.breakMinutes" type="number"
                                    min="1" max="60" :disabled="isRunning"
                                    @change="applySettings"
-                                   class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-50" />
+                                   class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 disabled:opacity-50" />
                         </div>
                     </div>
                     <!-- Presets -->

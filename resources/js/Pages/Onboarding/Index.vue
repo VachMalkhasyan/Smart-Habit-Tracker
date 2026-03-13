@@ -51,7 +51,7 @@
                                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
                                     <input v-model="form.username" type="text"
                                            placeholder="e.g. john_doe"
-                                           class="w-full pl-8 pr-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                           class="w-full pl-8 pr-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                                 </div>
                                 <p v-if="errors.username" class="text-red-500 text-xs mt-1">{{ errors.username }}</p>
                             </div>
@@ -62,7 +62,7 @@
                                 </label>
                                 <input v-model="form.bio" type="text"
                                        placeholder="Tell us a bit about yourself..."
-                                       class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                       class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                             </div>
                         </div>
                     </div>
@@ -126,7 +126,7 @@
                                 </label>
                                 <input v-model="form.habit_name" type="text"
                                        placeholder="e.g. Drink 8 glasses of water"
-                                       class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                       class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                             </div>
 
                             <div>
@@ -134,7 +134,7 @@
                                     Category
                                 </label>
                                 <select v-model="form.habit_category"
-                                        class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                        class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                                     <option value="">No category</option>
                                     <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                                         {{ categoryIcon(cat.name) }} {{ cat.name }}
@@ -148,14 +148,14 @@
                                         Goal
                                     </label>
                                     <input v-model="form.habit_goal" type="number" min="1"
-                                           class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                           class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                                         Unit
                                     </label>
                                     <select v-model="form.habit_goal_unit"
-                                            class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                            class="w-full px-4 py-3 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                                         <option value="days">Days</option>
                                         <option value="weeks">Weeks</option>
                                         <option value="months">Months</option>
@@ -219,7 +219,7 @@
                             <div class="flex items-center gap-3 pt-2">
                                 <span class="text-sm text-gray-500 dark:text-gray-400">Custom time:</span>
                                 <input v-model="form.reminder_time" type="time"
-                                       class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                       class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                             </div>
 
                             <!-- Summary card -->

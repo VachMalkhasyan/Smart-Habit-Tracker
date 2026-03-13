@@ -35,7 +35,7 @@
                                 <p class="text-xs text-gray-400 dark:text-gray-500">When to send your morning reminder</p>
                             </div>
                             <input v-model="form.reminder_time" type="time"
-                                   class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                   class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                         </div>
 
                         <div v-if="form.weekly_summary" class="flex items-center justify-between">
@@ -44,7 +44,7 @@
                                 <p class="text-xs text-gray-400 dark:text-gray-500">Which day to receive your weekly report</p>
                             </div>
                             <select v-model="form.weekly_summary_day"
-                                    class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                    class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                                 <option value="monday">Monday</option>
                                 <option value="tuesday">Tuesday</option>
                                 <option value="wednesday">Wednesday</option>
@@ -75,7 +75,7 @@
                             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Username</label>
                             <input v-model="form.username" type="text"
                                    placeholder="e.g. john_doe"
-                                   class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                   class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                         </div>
 
                         <!-- Bio -->
@@ -83,7 +83,7 @@
                             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Bio</label>
                             <input v-model="form.bio" type="text"
                                    placeholder="A short bio..."
-                                   class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                                   class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
                         </div>
 
                         <!-- Public toggle -->
@@ -168,7 +168,7 @@
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300 dark:text-gray-300 mb-2 block">Default Goal Unit</label>
                         <select v-model="form.default_goal_unit"
-                                class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                class="w-full px-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
                             <option value="days">Days</option>
                             <option value="weeks">Weeks</option>
                             <option value="months">Months</option>
@@ -198,7 +198,7 @@
                             maxlength="1"
                             placeholder="—"
                             readonly
-                            class="w-12 h-9 text-center text-sm font-bold border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer uppercase"
+                            class="w-12 h-9 text-center text-sm font-bold border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 cursor-pointer uppercase"
                         />
                     </div>
                 </div>
