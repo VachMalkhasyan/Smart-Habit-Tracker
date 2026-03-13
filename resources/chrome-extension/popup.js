@@ -35,17 +35,29 @@ const loginError   = document.getElementById('login-error')
 document.addEventListener('DOMContentLoaded', async () => {
     // Restore timer state
     chrome.storage.local.get(
-        ['timerSeconds','timerRunning','currentMode','workMin','breakMin','sessionCount','authToken'],
+        ['timerSeconds','timerEndTime','timerRunning','currentMode','workMin','breakMin','sessionCount','authToken'],
         (data) => {
             if (data.authToken)    authToken    = data.authToken
-            if (data.timerSeconds !== undefined) timerSeconds = data.timerSeconds
+            
+            if (data.timerRunning && data.timerEndTime && data.timerEndTime > Date.now()) {
+                timerSeconds = Math.ceil((data.timerEndTime - Date.now()) / 1000)
+            } else {
+                if (data.timerSeconds !== undefined) timerSeconds = data.timerSeconds
+            }
             if (data.workMin)    { workMin  = data.workMin;  workInput.value  = workMin  }
             if (data.breakMin)   { breakMin = data.breakMin; breakInput.value = breakMin }
             if (data.sessionCount) sessionCount = data.sessionCount
             currentMode = data.currentMode ?? 'work'
+            
             updateTimerDisplay()
             updateDots()
-            if (data.timerRunning) startLocalInterval()
+            
+            if (data.timerRunning && timerSeconds > 0) {
+                startLocalInterval(false)
+            } else if (data.timerRunning && timerSeconds <= 0) {
+                // Background alarm already finished it while popup was closed
+                fetchLatestState()
+            }
         }
     )
 
@@ -231,20 +243,37 @@ function apiPost(path, body = {}) {
 }
 
 // Timer
-function startLocalInterval() {
+function startLocalInterval(notifyBackground = true) {
     timerRunning          = true
     btnToggle.textContent = '⏸'
-    chrome.storage.local.set({ timerRunning: true })
+    
+    if (notifyBackground) {
+        chrome.runtime.sendMessage({ type: 'START_TIMER', seconds: timerSeconds })
+    }
+    
     timerInterval = setInterval(() => {
         timerSeconds--
-        chrome.storage.local.set({ timerSeconds })
         updateTimerDisplay()
         if (timerSeconds <= 0) {
             clearInterval(timerInterval)
             timerInterval = null
-            sessionDone()
+            
+            // Allow background.js 1 second to fire the alarm, sync, and update storage
+            setTimeout(fetchLatestState, 1000)
         }
     }, 1000)
+}
+
+function fetchLatestState() {
+    chrome.storage.local.get(['timerSeconds','timerRunning','currentMode','sessionCount'], (data) => {
+        timerRunning = data.timerRunning || false
+        btnToggle.textContent = timerRunning ? '⏸' : '▶'
+        if (data.timerSeconds !== undefined) timerSeconds = data.timerSeconds
+        if (data.sessionCount !== undefined) sessionCount = data.sessionCount
+        if (data.currentMode !== undefined)  currentMode = data.currentMode
+        updateDots()
+        updateTimerDisplay()
+    })
 }
 
 function stopLocalInterval() {
@@ -252,10 +281,11 @@ function stopLocalInterval() {
     btnToggle.textContent = '▶'
     clearInterval(timerInterval)
     timerInterval = null
-    chrome.storage.local.set({ timerRunning: false })
+    chrome.runtime.sendMessage({ type: 'STOP_TIMER' })
 }
 
 function sessionDone() {
+    // Fired on 'skip' manual override
     timerRunning          = false
     btnToggle.textContent = '▶'
 
@@ -270,18 +300,9 @@ function sessionDone() {
         timerSeconds = workMin * 60
     }
 
-    chrome.storage.local.set({ currentMode, timerSeconds })
+    chrome.storage.local.set({ currentMode, timerSeconds, timerRunning: false, timerEndTime: 0 })
     updateTimerDisplay()
-
-    // Chrome notification
-    chrome.notifications?.create({
-        type:    'basic',
-        iconUrl: 'icons/icon48.png',
-        title:   'Smart Habit Tracker',
-        message: currentMode === 'break'
-            ? '🍅 Focus done! Take a break.'
-            : '☕ Break over! Back to focus.',
-    })
+    chrome.runtime.sendMessage({ type: 'STOP_TIMER' })
 }
 
 function updateTimerDisplay() {

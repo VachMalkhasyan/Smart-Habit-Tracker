@@ -60,12 +60,47 @@ Route::middleware('auth:sanctum')->group(function () {
                 "Completed: {$habit->name}", 'habit', $habit->id);
         }
 
-        $user->refresh();
-
         return response()->json([
             'is_done'     => $completion->is_done,
             'xp_result'   => $xpResult,
             'xp_progress' => XpService::progressToNextLevel($user),
+        ]);
+    });
+
+    Route::post('/extension/pomodoro', function (Request $request) {
+        $user = $request->user();
+        
+        $request->validate([
+            'work_minutes'  => 'required|integer',
+            'break_minutes' => 'required|integer',
+            'sessions_completed' => 'required|integer',
+            'total_minutes' => 'required|integer',
+        ]);
+        
+        $session = \App\Models\PomodoroSession::create([
+            'user_id'       => $user->id,
+            'work_minutes'  => $request->work_minutes,
+            'break_minutes' => $request->break_minutes,
+            'sessions_completed' => $request->sessions_completed,
+            'total_minutes' => $request->total_minutes,
+            'started_at'    => now()->subMinutes($request->total_minutes),
+            'ended_at'      => now(),
+            'status'        => 'completed',
+        ]);
+        
+        // Award XP
+        $xpAmount = XpService::XP_POMODORO_SESSION * $request->sessions_completed;
+        $xpResult = XpService::award(
+            $user,
+            $xpAmount,
+            "Completed extension pomodoro session 🍅",
+            'pomodoro', $session->id
+        );
+        
+        return response()->json([
+            'success'   => true,
+            'xp_result' => $xpResult,
+            'xp_progress' => XpService::progressToNextLevel($user->fresh()),
         ]);
     });
 
