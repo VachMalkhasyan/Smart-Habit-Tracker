@@ -189,17 +189,23 @@ function loadHabits(habits) {
 
     habitsList.innerHTML = habits.map(h => `
         <div class="habit-item" data-id="${h.id}">
-            <div class="habit-check ${h.completed_today ? 'done' : ''}"
-                onclick="toggleHabit(${h.id}, this)">
+            <div class="habit-check ${h.completed_today ? 'done' : ''}" data-id="${h.id}">
                 ${h.completed_today ? '✓' : ''}
             </div>
             <span class="habit-name">${h.name}</span>
             <span class="habit-streak">🔥${h.current_streak}</span>
         </div>
     `).join('')
+
+    // Attach event listeners to comply with CSP
+    habitsList.querySelectorAll('.habit-check').forEach(el => {
+        el.addEventListener('click', () => {
+            toggleHabit(el.dataset.id, el)
+        })
+    })
 }
 
-window.toggleHabit = async (habitId, el) => {
+const toggleHabit = async (habitId, el) => {
     try {
         const res  = await apiPost(`/api/extension/habits/${habitId}/toggle`)
         const data = await res.json()
