@@ -4,9 +4,12 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CompletionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmailVerificationCodeController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\PomodoroController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
@@ -86,4 +89,30 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/cheers/{completion}',             [FriendController::class, 'cheer'])->name('cheers.store');
     Route::delete('/cheers/{completion}',           [FriendController::class, 'removeCheer'])->name('cheers.remove');
     Route::get('/u/{user}',                         [FriendController::class, 'publicProfile'])->name('friends.profile');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify',       [EmailVerificationCodeController::class, 'show'])
+        ->name('verification.notice');
+
+    Route::post('/email/verify',      [EmailVerificationCodeController::class, 'verify'])
+        ->name('verification.code.verify');
+
+    Route::post('/email/resend',      [EmailVerificationCodeController::class, 'resend'])
+        ->middleware('throttle:6,1')
+        ->name('verification.resend.send');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/onboarding',  [OnboardingController::class, 'show'])->name('onboarding');
+    Route::post('/onboarding', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
+    Route::post('/onboarding/reset', [OnboardingController::class, 'reset'])->name('onboarding.reset');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/pomodoro',                        [PomodoroController::class, 'index'])->name('pomodoro');
+    Route::post('/pomodoro',                       [PomodoroController::class, 'store'])->name('pomodoro.store');
+    Route::post('/pomodoro/{session}/complete',    [PomodoroController::class, 'complete'])->name('pomodoro.complete');
+    Route::post('/pomodoro/{session}/abandon',     [PomodoroController::class, 'abandon'])->name('pomodoro.abandon');
 });

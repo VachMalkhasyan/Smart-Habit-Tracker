@@ -20,6 +20,8 @@ class SettingsController extends Controller
             'email_reminders'     => 'boolean',
             'missed_habit_alerts' => 'boolean',
             'weekly_summary'      => 'boolean',
+            'reminder_time'      => 'nullable|string|max:5',
+            'weekly_summary_day' => 'nullable|string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
             'theme'               => 'in:light,dark,system',
             'week_start'          => 'in:monday,sunday,saturday',
             'default_priority'    => 'in:1,2,3',

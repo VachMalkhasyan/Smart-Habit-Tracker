@@ -28,6 +28,33 @@
                             ]"></span>
                         </button>
                     </div>
+                    <div v-if="form.email_reminders" class="mt-4 space-y-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Daily Reminder Time</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">When to send your morning reminder</p>
+                            </div>
+                            <input v-model="form.reminder_time" type="time"
+                                   class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                        </div>
+
+                        <div v-if="form.weekly_summary" class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Weekly Summary Day</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">Which day to receive your weekly report</p>
+                            </div>
+                            <select v-model="form.weekly_summary_day"
+                                    class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                                <option value="monday">Monday</option>
+                                <option value="tuesday">Tuesday</option>
+                                <option value="wednesday">Wednesday</option>
+                                <option value="thursday">Thursday</option>
+                                <option value="friday">Friday</option>
+                                <option value="saturday">Saturday</option>
+                                <option value="sunday">Sunday</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -193,6 +220,21 @@
                 </p>
                 <ExportButton />
             </div>
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-800">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Setup Wizard</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Re-run the onboarding wizard</p>
+                    </div>
+                    <Link :href="route('onboarding.reset')" method="post" as="button">
+                        <Button variant="outline" size="sm"
+                                class="gap-2 dark:border-gray-700 dark:text-gray-300">
+                            <Wand2 class="w-4 h-4" />
+                            Restart Wizard
+                        </Button>
+                    </Link>
+                </div>
+            </div>
 
             <!-- Danger Zone -->
             <div class="bg-white dark:bg-gray-900 rounded-2xl border border-red-100 dark:border-red-900 shadow-sm p-6">
@@ -266,7 +308,7 @@
 
 <script setup>
 import {ref, computed, watch} from 'vue'
-import { useForm, router, usePage } from '@inertiajs/vue3'
+import {useForm, router, usePage, Link} from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import {
@@ -275,7 +317,7 @@ import {
 } from '@/components/ui/dialog'
 import {
     Bell, Palette, SlidersHorizontal, ShieldAlert,
-    Sun, Moon, Monitor, Check, Loader2, Keyboard, Download
+    Sun, Moon, Monitor, Check, Loader2, Keyboard, Download, Wand2
 } from 'lucide-vue-next'
 import { useTheme } from '@/composables/useTheme'
 import {toast} from "vue-sonner";
@@ -339,6 +381,8 @@ const form = useForm({
     email_reminders:      props.settings?.email_reminders      ?? true,
     missed_habit_alerts:  props.settings?.missed_habit_alerts  ?? true,
     weekly_summary:       props.settings?.weekly_summary       ?? false,
+    reminder_time:        props.settings?.reminder_time        ?? '08:00',
+    weekly_summary_day:   props.settings?.weekly_summary_day   ?? 'monday',
     theme:                props.settings?.theme                ?? 'system',
     week_start:           props.settings?.week_start           ?? 'monday',
     default_priority:     props.settings?.default_priority     ?? 2,

@@ -50,6 +50,9 @@ class HandleInertiaRequests extends Middleware
                     ->where('status', 'pending')
                     ->count()
                 : 0,
+            'onboarding_completed' => $request->user()?->onboarding_completed ?? false,
+            'xp_progress' => $request->user() ? \App\Services\XpService::progressToNextLevel($request->user()->fresh()) : null,
+
         ]);
     }
 }

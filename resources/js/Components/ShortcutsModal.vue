@@ -53,6 +53,7 @@ const shortcuts = computed(() =>
             analytics:   'a',
             friends:     'f',
             templates:   't',
+            onboarding:  'o',
         }
 )
 
@@ -67,5 +68,7 @@ const shortcutList = [
     { key: 'settings',   label: 'Go to Settings' },
     { key: 'search',     label: 'Open Search' },
     { key: 'help',       label: 'Show This Modal' },
+    { key: 'onboarding', label: 'Restart Onboarding Wizard' },
+
 ]
 </script>

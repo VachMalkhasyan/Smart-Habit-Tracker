@@ -68,6 +68,9 @@
                     </div>
                 </Link>
 
+                <XpBar :xp="$page.props.xp_progress" />
+
+
                 <!-- Logout -->
                 <button @click="logout"
                         :class="[
@@ -124,7 +127,8 @@ import {
     LogOut,
     BarChart2,
     LayoutTemplate,
-    Users
+    Users,
+    Timer
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -133,6 +137,7 @@ import ShortcutsModal from "@/Components/ShortcutsModal.vue";
 import {useShortcuts} from "@/composables/useShortcuts.js";
 import GlobalSearch from "@/Components/GlobalSearch.vue";
 import { Search } from 'lucide-vue-next'
+import XpBar from "@/Components/XpBar.vue";
 const props = defineProps({
     title: String,
     subtitle: String,
@@ -155,6 +160,8 @@ const navItems = [
     { label: 'Categories',  href: route('categories.index'), icon: Tag },
     { label: 'Friends', href: route('friends.index'), icon: Users },
     { label: 'Settings',    href: route('settings'),     icon: Settings },
+    { label: 'Pomodoro', href: route('pomodoro'), icon: Timer },
+
 ]
 
 const isActive = (href) => page.url.startsWith(new URL(href).pathname)

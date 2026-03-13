@@ -15,7 +15,9 @@ export function useShortcuts(extras = {}) {
             help:        '?',
             analytics:   'a',
             friends:     'f',
-            templates:   't',  // ← add all three
+            templates:   't',
+            onboarding:  'o',
+
         }
     }
 
@@ -56,6 +58,7 @@ export function useShortcuts(extras = {}) {
             [shortcuts.analytics]:  () => router.visit(route('analytics')),
             [shortcuts.friends]:    () => router.visit(route('friends.index')),
             [shortcuts.templates]:  () => router.visit(route('templates.index')),
+            [shortcuts.onboarding]:  () => router.visit(route('onboarding')),
         }
 
         if (navigationMap[key]) {
