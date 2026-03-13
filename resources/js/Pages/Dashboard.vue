@@ -1,233 +1,227 @@
 <template>
     <AppLayout title="Dashboard" subtitle="Here's how your habits are going today">
-
         <template #header-actions>
-            <Link :href="route('habits.create')">
-                <Button class="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
-                    <Plus class="w-4 h-4" />
-                    New Habit
+            <div class="flex items-center gap-3">
+                <Button @click="toggleEditMode" :class="isEditMode ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'">
+                    <Settings class="w-4 h-4 mr-2" />
+                    {{ isEditMode ? 'Done Editing' : 'Customize' }}
                 </Button>
-            </Link>
+                <Link :href="route('habits.create')">
+                    <Button class="bg-indigo-600 hover:bg-indigo-700 text-white gap-2">
+                        <Plus class="w-4 h-4" />
+                        New Habit
+                    </Button>
+                </Link>
+            </div>
         </template>
 
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-            <div v-for="stat in stats" :key="stat.label"
-                 class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
-                <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">{{ stat.label }}</span>
-                    <div :class="`p-2 rounded-xl ${stat.bg}`">
-                        <component :is="stat.icon" :class="`w-4 h-4 ${stat.color}`" />
-                    </div>
-                </div>
-                <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ stat.value }}</p>
-                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ stat.hint }}</p>
-            </div>
+        <div v-if="isEditMode" class="bg-indigo-50 dark:bg-indigo-900/30 rounded-xl p-4 mb-6 border border-indigo-100 dark:border-indigo-800 flex items-center justify-between">
+            <span class="text-sm text-indigo-800 dark:text-indigo-200 font-medium">✨ Dashboard Edit Mode Active — Drag widgets to rearrange them.</span>
+
+            <Dropdown align="right" width="64" v-if="availableWidgets.length > 0">
+                <template #trigger>
+                    <Button size="sm" class="bg-indigo-600 hover:bg-indigo-700 text-white gap-1">
+                        <Plus class="w-4 h-4" /> Add Widget
+                    </Button>
+                </template>
+                <template #content>
+                    <button v-for="widget in availableWidgets" :key="widget.type" @click="addWidget(widget)" class="block w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
+                        {{ widget.label }}
+                    </button>
+                </template>
+            </Dropdown>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-            <!-- Today's Habits -->
-            <div class="xl:col-span-2 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 class="font-semibold text-gray-800 dark:text-gray-200">Today's Habits</h2>
-                    <span class="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
-                        {{ todayCompleted }}/{{ habits.length }} done
-                    </span>
-                </div>
-
-                <div class="divide-y divide-gray-50 dark:divide-gray-800">
-                    <div v-if="habits.length === 0" class="px-6 py-10 text-center text-gray-400 dark:text-gray-500">
-                        <ListChecks class="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p class="text-sm">No habits yet. Create your first one!</p>
-                    </div>
-
-                    <div v-for="habit in habits" :key="habit.id"
-                         class="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:bg-gray-800 transition-colors group">
-
-                        <!-- Check button -->
-                        <button @click="toggleHabit(habit)"
-                                :class="[
-                                'w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-                                habit.is_done_today
-                                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                                    : 'border-gray-300 hover:border-indigo-400'
-                            ]">
-                            <Check v-if="habit.is_done_today" class="w-4 h-4" />
-                        </button>
-
-                        <!-- Info -->
-                        <div class="flex-1 min-w-0">
-                            <p :class="['text-sm font-medium truncate', habit.is_done_today ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200']">
-                                {{ habit.name }}
-                            </p>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                                {{ habit.category?.name ?? 'No category' }} •
-                                {{ habit.today_count }}/{{ habit.repeat_count }}x today
-                            </p>
-                        </div>
-
-                        <!-- Streak -->
-                        <div class="flex items-center gap-1 text-orange-500">
-                            <Flame class="w-4 h-4" />
-                            <span class="text-sm font-semibold">{{ habit.current_streak }}</span>
-                        </div>
-
-                        <!-- Priority badge -->
-                        <span :class="priorityClass(habit.priority)"
-                              class="text-xs px-2 py-0.5 rounded-full font-medium hidden group-hover:inline-block">
-                            {{ priorityLabel(habit.priority) }}
-                        </span>
-                    </div>
-                </div>
+        <div v-if="layout.length === 0" class="text-center py-20 text-gray-400">
+            <div class="inline-flex w-16 h-16 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 items-center justify-center mb-4">
+                <LayoutDashboard class="w-8 h-8" />
             </div>
+            <p>Your dashboard is currently empty.</p>
+            <p v-if="!isEditMode" class="mt-2 text-sm text-indigo-500 cursor-pointer" @click="isEditMode = true">Click 'Customize' to start building it.</p>
+        </div>
 
-            <!-- Right Column -->
-            <div class="flex flex-col gap-6">
+        <draggable
+            v-model="layout"
+            item-key="id"
+            class="grid grid-cols-12 gap-6"
+            handle=".drag-handle"
+            @end="saveLayoutToServer"
+            :animation="200"
+        >
+            <template #item="{ element }">
+                <div :class="['col-span-12 relative group', widthClass(element.w)]" :style="{ minHeight: '120px' }">
+                    <div v-if="isEditMode" class="absolute -top-3 -right-3 z-30 flex items-center gap-1">
+                        <!-- Width Toggle -->
+                        <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow rounded-lg flex items-center overflow-hidden h-8 divide-x divide-gray-100 dark:divide-gray-700">
+                            <button @click="changeWidth(element, 4)" :class="['px-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', element.w === 4 || element.w === '4' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-gray-500']" title="1/3 Width">1/3</button>
+                            <button @click="changeWidth(element, 6)" :class="['px-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', element.w === 6 || element.w === '6' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-gray-500']" title="1/2 Width">1/2</button>
+                            <button @click="changeWidth(element, 8)" :class="['px-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', element.w === 8 || element.w === '8' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-gray-500']" title="2/3 Width">2/3</button>
+                            <button @click="changeWidth(element, 12)" :class="['px-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors', element.w === 12 || element.w === '12' ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-gray-500']" title="Full Width">Full</button>
+                        </div>
 
-                <!-- Weekly Progress Chart -->
-                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
-                    <h2 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">Weekly Progress</h2>
-                    <apexchart
-                        type="bar"
-                        height="180"
-                        :options="chartOptions"
-                        :series="chartSeries"
+                        <!-- Drag Handle -->
+                        <div class="drag-handle w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow flex items-center justify-center rounded-full cursor-move text-gray-400 hover:text-indigo-600 transition-colors">
+                            <GripHorizontal class="w-4 h-4" />
+                        </div>
+                    </div>
+
+                    <button v-if="isEditMode && !element.is_core" @click="removeWidget(element.id)" class="absolute -top-3 -left-3 z-30 w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow flex items-center justify-center rounded-full text-red-400 hover:text-red-600 transition-colors">
+                        <X class="w-4 h-4" />
+                    </button>
+                    <div v-if="isEditMode && element.is_core" class="absolute -top-3 -left-3 z-30 w-8 h-8 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow flex items-center justify-center rounded-full text-gray-400" title="Core widget cannot be removed">
+                        <Lock class="w-3.5 h-3.5" />
+                    </div>
+
+                    <!-- Focus overlay during edit mode to highlight dragging -->
+                    <div v-if="isEditMode" class="absolute inset-0 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl pointer-events-none z-20 transition-all opacity-0 group-hover:opacity-100 group-active:opacity-100 bg-indigo-50/10 hidden md:block"></div>
+
+                    <component
+                        :is="widgetMap[element.type]"
+                        v-bind="getPropsForWidget(element)"
+                        @update-config="(config) => updateWidgetConfig(element.id, config)"
                     />
                 </div>
-
-                <!-- Top Streaks -->
-                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
-                    <h2 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">🔥 Top Streaks</h2>
-                    <div class="space-y-3">
-                        <div v-if="topStreaks.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
-                            No streaks yet
-                        </div>
-                        <div v-for="habit in topStreaks" :key="habit.id"
-                             class="flex items-center justify-between">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <div class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></div>
-                                <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ habit.name }}</span>
-                            </div>
-                            <div class="flex items-center gap-1 text-orange-500 shrink-0">
-                                <Flame class="w-3.5 h-3.5" />
-                                <span class="text-sm font-bold">{{ habit.current_streak }} days</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
+            </template>
+        </draggable>
     </AppLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
+import draggable from 'vuedraggable'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
-import {
-    Plus, Check, Flame, ListChecks,
-    TrendingUp, CalendarCheck, Target, Award
-} from 'lucide-vue-next'
+import Dropdown from '@/Components/Dropdown.vue'
+import { Plus, Settings, GripHorizontal, X, LayoutDashboard, Lock } from 'lucide-vue-next'
+
+// Import all widgets
+import StatCardWidget from '@/Components/Widgets/StatCardWidget.vue'
+import TodayHabitsWidget from '@/Components/Widgets/TodayHabitsWidget.vue'
+import WeeklyProgressWidget from '@/Components/Widgets/WeeklyProgressWidget.vue'
+import TopStreaksWidget from '@/Components/Widgets/TopStreaksWidget.vue'
+import MonthlyTrendWidget from '@/Components/Widgets/MonthlyTrendWidget.vue'
+import PinnedFriendWidget from '@/Components/Widgets/PinnedFriendWidget.vue'
+import QuickPomodoroWidget from '@/Components/Widgets/QuickPomodoroWidget.vue'
 
 const props = defineProps({
     habits: Array,
-    weeklyData: Array,   // [{ day: 'Mon', completed: 3 }]
+    weeklyData: Array,
+    monthlyTrend: Array,
+    friends: Array,
+    dashboardLayout: Array,
     totalActive: Number,
     totalCompleted: Number,
     longestStreak: Number,
     todayCompleted: Number,
 })
 
-const isDark = computed(() =>
-    document.documentElement.classList.contains('dark')
-)
+const isEditMode = ref(false)
+const layout = ref(props.dashboardLayout || [])
 
-// Stats cards
-const stats = computed(() => [
-    {
-        label: 'Active Habits',
-        value: props.totalActive ?? 0,
-        hint: 'Currently tracking',
-        icon: Target,
-        bg: 'bg-indigo-50',
-        color: 'text-indigo-600'
-    },
-    {
-        label: 'Done Today',
-        value: props.todayCompleted ?? 0,
-        hint: `Out of ${props.habits?.length ?? 0} habits`,
-        icon: CalendarCheck,
-        bg: 'bg-green-50',
-        color: 'text-green-600'
-    },
-    {
-        label: 'Completed',
-        value: props.totalCompleted ?? 0,
-        hint: 'All time',
-        icon: Award,
-        bg: 'bg-yellow-50',
-        color: 'text-yellow-600'
-    },
-    {
-        label: 'Longest Streak',
-        value: `${props.longestStreak ?? 0}d`,
-        hint: 'Personal best',
-        icon: TrendingUp,
-        bg: 'bg-orange-50',
-        color: 'text-orange-500'
-    },
-])
-
-// Top 4 streaks
-const topStreaks = computed(() =>
-    [...(props.habits ?? [])]
-        .filter(h => h.current_streak > 0)
-        .sort((a, b) => b.current_streak - a.current_streak)
-        .slice(0, 4)
-)
-
-// Priority helpers
-const priorityClass = (p) => ({
-    1: 'bg-red-100 text-red-600',
-    2: 'bg-yellow-100 text-yellow-600',
-    3: 'bg-green-100 text-green-600',
-}[p] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500')
-
-const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
-
-// Chart
-const chartOptions = computed(() => ({
-    chart: { toolbar: { show: false }, sparkline: { enabled: false } },
-    plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
-    dataLabels: { enabled: false },
-    theme: {
-        mode: isDark.value ? 'dark' : 'light'
-    },
-    xaxis: {
-        categories: props.weeklyData?.map(d => d.day) ?? ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-        labels: { style: { fontSize: '11px', colors: '#9ca3af' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-    },
-    yaxis: { labels: { style: { colors: '#9ca3af' } } },
-    grid: { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
-    colors: ['#6366f1'],
-    tooltip: { theme: isDark.value ? 'dark' : 'light' },
-}))
-
-const chartSeries = [{
-    name: 'Completed',
-    data: props.weeklyData?.map(d => d.completed) ?? [0,0,0,0,0,0,0],
-}]
-
-// Toggle habit completion
-const toggleHabit = (habit) => {
-    router.post(route('completions.toggle', habit.id), {}, {
-        preserveScroll: true,
-    })
+const widgetMap = {
+    StatCardWidget,
+    TodayHabitsWidget,
+    WeeklyProgressWidget,
+    TopStreaksWidget,
+    MonthlyTrendWidget,
+    PinnedFriendWidget,
+    QuickPomodoroWidget,
 }
+
+// Registry of all allowed widgets that users can add
+const WIDGET_REGISTRY = [
+    { type: 'StatCardWidget', label: 'Stat: Active Habits', w: 3, config: { statType: 'active_habits' } },
+    { type: 'StatCardWidget', label: 'Stat: Done Today', w: 3, config: { statType: 'done_today' } },
+    { type: 'StatCardWidget', label: 'Stat: Completed All-time', w: 3, config: { statType: 'completed_all' } },
+    { type: 'StatCardWidget', label: 'Stat: Longest Streak', w: 3, config: { statType: 'longest_streak' } },
+    { type: 'TodayHabitsWidget', label: 'Today\'s Habits List', w: 8 },
+    { type: 'WeeklyProgressWidget', label: 'Weekly Chart', w: 4 },
+    { type: 'TopStreaksWidget', label: 'Top Streaks List', w: 4 },
+    { type: 'MonthlyTrendWidget', label: 'Monthly Trend Chart', w: 4 },
+    { type: 'PinnedFriendWidget', label: 'Pinned Friend Activity', w: 4 },
+    { type: 'QuickPomodoroWidget', label: 'Quick Pomodoro', w: 4 },
+]
+
+// Allow multiple instances except for singletons like TodayHabits
+const availableWidgets = computed(() => {
+    return WIDGET_REGISTRY.filter(w => {
+        if (w.type === 'TodayHabitsWidget') {
+            return !layout.value.some(l => l.type === w.type)
+        }
+        if (w.type === 'StatCardWidget') {
+            return !layout.value.some(l => l.type === 'StatCardWidget' && l.config?.statType === w.config?.statType)
+        }
+        return true
+    })
+})
+
+const toggleEditMode = () => {
+    isEditMode.value = !isEditMode.value
+}
+
+const changeWidth = (element, newWidth) => {
+    element.w = newWidth
+    saveLayoutToServer()
+}
+
+const addWidget = (widgetInfo) => {
+    layout.value.unshift({
+        id: 'widget_' + Date.now() + Math.floor(Math.random() * 1000),
+        type: widgetInfo.type,
+        w: widgetInfo.w,
+        config: widgetInfo.config || {}
+    })
+    saveLayoutToServer()
+}
+
+const removeWidget = (id) => {
+    layout.value = layout.value.filter(l => l.id !== id)
+    saveLayoutToServer()
+}
+
+const updateWidgetConfig = (id, config) => {
+    const item = layout.value.find(l => l.id === id)
+    if (item) {
+        item.config = config
+        saveLayoutToServer()
+    }
+}
+
+const saveLayoutToServer = () => {
+    router.post(route('dashboard.layout.update'), {
+        dashboard_layout: layout.value
+    }, { preserveScroll: true })
+}
+
+const widthClass = (w) => {
+    return {
+        4: 'md:col-span-4',
+        6: 'md:col-span-6',
+        8: 'md:col-span-8',
+        12: 'md:col-span-12'
+    }[w] || 'md:col-span-12'
+}
+const getPropsForWidget = (element) => {
+    const base = { widgetConfig: element.config || {} }
+
+    switch (element.type) {
+        case 'StatCardWidget':
+            return { ...base, totalActive: props.totalActive, todayCompleted: props.todayCompleted, totalCompleted: props.totalCompleted, longestStreak: props.longestStreak, habits: props.habits }
+        case 'TodayHabitsWidget':
+            return { ...base, habits: props.habits, todayCompleted: props.todayCompleted }
+        case 'WeeklyProgressWidget':
+            return { ...base, weeklyData: props.weeklyData }
+        case 'TopStreaksWidget':
+            return { ...base, habits: props.habits }
+        case 'MonthlyTrendWidget':
+            return { ...base, monthlyTrend: props.monthlyTrend }
+        case 'PinnedFriendWidget':
+            return { ...base, friends: props.friends }
+        case 'QuickPomodoroWidget':
+            return base
+    }
+    return base
+}
+
 </script>

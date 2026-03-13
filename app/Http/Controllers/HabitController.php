@@ -151,28 +151,29 @@ class HabitController extends Controller
      */
     public function destroy(Habit $habit)
     {
-        $this->authorize('delete', $habit);
+        if ($habit->user_id !== request()->user()->id) {
+            abort(403);
+        }
+
         $habit->delete();
-        return Redirect::route('habits.index')->with('success', 'Habit deleted!');
+
+        return redirect()->route('habits.index')->with('success', 'Habit deleted.');
     }
-    /**
-     * Reorder the specified resource in storage.
-     */
+
     public function reorder(Request $request)
     {
         $request->validate([
-            'habits'       => 'required|array',
-            'habits.*.id'  => 'required|exists:habits,id',
-            'habits.*.order' => 'required|integer',
+            'ordered_ids'   => 'required|array',
+            'ordered_ids.*' => 'integer|exists:habits,id',
         ]);
 
-        foreach ($request->habits as $item) {
-            $request->user()->habits()
-                ->where('id', $item['id'])
-                ->update(['order' => $item['order']]);
+        $user = $request->user();
+        $orderedIds = $request->input('ordered_ids');
+        
+        foreach ($orderedIds as $index => $id) {
+            $user->habits()->where('id', $id)->update(['priority' => $index + 1]);
         }
 
-        return back();
+        return redirect()->back();
     }
-
 }

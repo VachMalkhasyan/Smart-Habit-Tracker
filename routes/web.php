@@ -38,11 +38,7 @@ Route::middleware([
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
-});
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/dashboard/layout', [DashboardController::class, 'updateLayout'])->name('dashboard.layout.update');
     Route::post('/habits/reorder', [HabitController::class, 'reorder'])->name('habits.reorder');
     Route::resource('habits', HabitController::class);
 });

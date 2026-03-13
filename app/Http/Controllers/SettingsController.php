@@ -20,8 +20,8 @@ class SettingsController extends Controller
             'email_reminders'     => 'boolean',
             'missed_habit_alerts' => 'boolean',
             'weekly_summary'      => 'boolean',
-            'reminder_time'      => 'nullable|string|max:5',
-            'weekly_summary_day' => 'nullable|string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+            'reminder_time'       => 'nullable|string|max:5',
+            'weekly_summary_day'  => 'nullable|string|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
             'theme'               => 'in:light,dark,system',
             'week_start'          => 'in:monday,sunday,saturday',
             'default_priority'    => 'in:1,2,3',
@@ -33,8 +33,14 @@ class SettingsController extends Controller
             'is_public'           => 'boolean',
         ]);
 
-        $request->user()->update([
-            'settings'  => $validated,
+        $user = $request->user();
+
+        $currentSettings = $user->settings ?? [];
+
+        $mergedSettings = array_replace_recursive($currentSettings, $validated);
+
+        $user->update([
+            'settings'  => $mergedSettings,
             'username'  => $request->username,
             'bio'       => $request->bio,
             'is_public' => $request->is_public ?? false,
