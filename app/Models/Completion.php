@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Completion extends Model
 {
@@ -22,5 +23,9 @@ class Completion extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+    public function cheers(): HasMany
+    {
+        return $this->hasMany(Cheer::class);
     }
 }

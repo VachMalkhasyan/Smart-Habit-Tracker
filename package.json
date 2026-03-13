@@ -33,7 +33,9 @@
         "tailwind-merge": "^3.5.0",
         "tailwindcss-animate": "^1.0.7",
         "vee-validate": "^4.15.1",
+        "vue-sonner": "^2.0.9",
         "vue3-apexcharts": "^1.11.1",
+        "vuedraggable": "^4.1.0",
         "zod": "^3.25.76"
     }
 }

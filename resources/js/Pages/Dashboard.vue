@@ -13,37 +13,37 @@
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
             <div v-for="stat in stats" :key="stat.label"
-                 class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                 class="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
                 <div class="flex items-center justify-between mb-3">
-                    <span class="text-sm font-medium text-gray-500">{{ stat.label }}</span>
+                    <span class="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">{{ stat.label }}</span>
                     <div :class="`p-2 rounded-xl ${stat.bg}`">
                         <component :is="stat.icon" :class="`w-4 h-4 ${stat.color}`" />
                     </div>
                 </div>
-                <p class="text-3xl font-bold text-gray-900">{{ stat.value }}</p>
-                <p class="text-xs text-gray-400 mt-1">{{ stat.hint }}</p>
+                <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ stat.value }}</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">{{ stat.hint }}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
             <!-- Today's Habits -->
-            <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h2 class="font-semibold text-gray-800">Today's Habits</h2>
-                    <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+            <div class="xl:col-span-2 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h2 class="font-semibold text-gray-800 dark:text-gray-200">Today's Habits</h2>
+                    <span class="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
                         {{ todayCompleted }}/{{ habits.length }} done
                     </span>
                 </div>
 
-                <div class="divide-y divide-gray-50">
-                    <div v-if="habits.length === 0" class="px-6 py-10 text-center text-gray-400">
+                <div class="divide-y divide-gray-50 dark:divide-gray-800">
+                    <div v-if="habits.length === 0" class="px-6 py-10 text-center text-gray-400 dark:text-gray-500">
                         <ListChecks class="w-10 h-10 mx-auto mb-2 opacity-30" />
                         <p class="text-sm">No habits yet. Create your first one!</p>
                     </div>
 
                     <div v-for="habit in habits" :key="habit.id"
-                         class="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors group">
+                         class="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 dark:bg-gray-800 transition-colors group">
 
                         <!-- Check button -->
                         <button @click="toggleHabit(habit)"
@@ -58,10 +58,10 @@
 
                         <!-- Info -->
                         <div class="flex-1 min-w-0">
-                            <p :class="['text-sm font-medium truncate', habit.is_done_today ? 'line-through text-gray-400' : 'text-gray-800']">
+                            <p :class="['text-sm font-medium truncate', habit.is_done_today ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200']">
                                 {{ habit.name }}
                             </p>
-                            <p class="text-xs text-gray-400 mt-0.5">
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                                 {{ habit.category?.name ?? 'No category' }} •
                                 {{ habit.today_count }}/{{ habit.repeat_count }}x today
                             </p>
@@ -86,8 +86,8 @@
             <div class="flex flex-col gap-6">
 
                 <!-- Weekly Progress Chart -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h2 class="font-semibold text-gray-800 mb-4">Weekly Progress</h2>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h2 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">Weekly Progress</h2>
                     <apexchart
                         type="bar"
                         height="180"
@@ -97,17 +97,17 @@
                 </div>
 
                 <!-- Top Streaks -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h2 class="font-semibold text-gray-800 mb-4">🔥 Top Streaks</h2>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h2 class="font-semibold text-gray-800 dark:text-gray-200 mb-4">🔥 Top Streaks</h2>
                     <div class="space-y-3">
-                        <div v-if="topStreaks.length === 0" class="text-sm text-gray-400 text-center py-4">
+                        <div v-if="topStreaks.length === 0" class="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
                             No streaks yet
                         </div>
                         <div v-for="habit in topStreaks" :key="habit.id"
                              class="flex items-center justify-between">
                             <div class="flex items-center gap-2 min-w-0">
                                 <div class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></div>
-                                <span class="text-sm text-gray-700 truncate">{{ habit.name }}</span>
+                                <span class="text-sm text-gray-700 dark:text-gray-300 truncate">{{ habit.name }}</span>
                             </div>
                             <div class="flex items-center gap-1 text-orange-500 shrink-0">
                                 <Flame class="w-3.5 h-3.5" />
@@ -191,7 +191,7 @@ const priorityClass = (p) => ({
     1: 'bg-red-100 text-red-600',
     2: 'bg-yellow-100 text-yellow-600',
     3: 'bg-green-100 text-green-600',
-}[p] ?? 'bg-gray-100 text-gray-500')
+}[p] ?? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500')
 
 const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
 

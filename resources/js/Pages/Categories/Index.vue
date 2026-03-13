@@ -4,8 +4,8 @@
         <div class="max-w-3xl mx-auto space-y-6">
 
             <!-- Create New Category -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h2 class="font-semibold text-gray-800 mb-4">Add Custom Category</h2>
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
+                <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Add Custom Category</h2>
                 <form @submit.prevent="submit" class="flex gap-3">
                     <input
                         v-model="form.name"
@@ -26,7 +26,7 @@
             </div>
 
             <!-- Global Categories -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                     <Globe class="w-4 h-4 text-indigo-400" />
                     <h2 class="font-semibold text-gray-800">Global Categories</h2>
@@ -34,7 +34,7 @@
                         {{ globalCategories.length }}
                     </span>
                 </div>
-                <div class="divide-y divide-gray-50">
+                <div class="divide-y divide-gray-50 dark:divide-gray-800">
                     <div v-for="cat in globalCategories" :key="cat.id"
                          class="flex items-center justify-between px-6 py-4">
                         <div class="flex items-center gap-3">
@@ -54,7 +54,7 @@
             </div>
 
             <!-- User Custom Categories -->
-            <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div class="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
                     <User class="w-4 h-4 text-green-400" />
                     <h2 class="font-semibold text-gray-800">My Categories</h2>
@@ -69,7 +69,7 @@
                     <p class="text-sm">No custom categories yet</p>
                 </div>
 
-                <div v-else class="divide-y divide-gray-50">
+                <div v-else class="divide-y divide-gray-50 dark:divide-gray-800">
                     <div v-for="cat in userCategories" :key="cat.id"
                          class="flex items-center justify-between px-6 py-4 group">
 

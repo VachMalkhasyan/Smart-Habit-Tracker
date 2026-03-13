@@ -3,11 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\HabitCategory;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CategoryController extends Controller
 {
+    use AuthorizesRequests;
+
     public function index(Request $request)
     {
         $categories = HabitCategory::availableFor($request->user()->id)

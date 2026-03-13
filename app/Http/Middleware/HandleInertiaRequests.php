@@ -35,9 +35,21 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
-            //
-        ];
+        return array_merge(parent::share($request), [
+            'auth' => [
+                'user' => $request->user()?->fresh(),
+            ],
+            'flash' => [
+                'success' => session('success'),
+                'error'   => session('error'),
+                'warning' => session('warning'),
+                'info'    => session('info'),
+            ],
+            'pendingFriendRequests' => $request->user()
+                ? $request->user()->receivedFriendRequests()
+                    ->where('status', 'pending')
+                    ->count()
+                : 0,
+        ]);
     }
 }

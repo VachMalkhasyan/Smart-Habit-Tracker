@@ -24,9 +24,21 @@ class SettingsController extends Controller
             'week_start'          => 'in:monday,sunday,saturday',
             'default_priority'    => 'in:1,2,3',
             'default_goal_unit'   => 'in:days,weeks,months,years',
+            'shortcuts'           => 'nullable|array',
+            'shortcuts.*'         => 'nullable|string|max:1',
+            'username'            => 'nullable|string|max:30|alpha_dash|unique:users,username,' . $request->user()->id,
+            'bio'                 => 'nullable|string|max:160',
+            'is_public'           => 'boolean',
         ]);
 
-        $request->user()->update(['settings' => $validated]);
+        $request->user()->update([
+            'settings'  => $validated,
+            'username'  => $request->username,
+            'bio'       => $request->bio,
+            'is_public' => $request->is_public ?? false,
+        ]);
+
+        $request->session()->put('url.intended', null);
 
         return back()->with('success', 'Settings saved!');
     }

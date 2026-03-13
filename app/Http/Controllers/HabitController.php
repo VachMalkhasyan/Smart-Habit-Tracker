@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Habit;
 use App\Models\HabitCategory;
+use App\Models\HabitTemplate;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
 class HabitController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Display a listing of the resource.
      */
@@ -18,8 +22,10 @@ class HabitController extends Controller
         $habits = $request->user()->habits()
             ->with('category')
             ->withCount('completions')
+            ->orderBy('order')
             ->orderBy('priority')
             ->get();
+
 
         $categories = HabitCategory::availableFor($request->user()->id)->get();
 
@@ -35,7 +41,21 @@ class HabitController extends Controller
     public function create(Request $request)
     {
         $categories = HabitCategory::availableFor($request->user()->id)->get();
-        return Inertia::render('Habits/CreateEdit', ['categories' => $categories]);
+        $template   = null;
+        $templates  = HabitTemplate::orderBy('category')
+            ->orderBy('sort_order')
+            ->get()
+            ->groupBy('category');
+
+        if ($request->has('template')) {
+            $template = HabitTemplate::find($request->template);
+        }
+
+        return Inertia::render('Habits/CreateEdit', [
+            'categories'      => $categories,
+            'template'        => $template,
+            'templateGroups'  => $templates,
+        ]);
     }
 
     /**
@@ -70,11 +90,13 @@ class HabitController extends Controller
         $this->authorize('update', $habit);
 
         $completions = $habit->completions()
+            ->with(['cheers.user'])
             ->orderBy('completed_at', 'desc')
             ->take(30)
             ->get();
 
         $todayCompletion = $habit->completions()
+            ->with(['cheers.user'])
             ->whereDate('completed_at', today())
             ->first();
 
@@ -133,4 +155,24 @@ class HabitController extends Controller
         $habit->delete();
         return Redirect::route('habits.index')->with('success', 'Habit deleted!');
     }
+    /**
+     * Reorder the specified resource in storage.
+     */
+    public function reorder(Request $request)
+    {
+        $request->validate([
+            'habits'       => 'required|array',
+            'habits.*.id'  => 'required|exists:habits,id',
+            'habits.*.order' => 'required|integer',
+        ]);
+
+        foreach ($request->habits as $item) {
+            $request->user()->habits()
+                ->where('id', $item['id'])
+                ->update(['order' => $item['order']]);
+        }
+
+        return back();
+    }
+
 }

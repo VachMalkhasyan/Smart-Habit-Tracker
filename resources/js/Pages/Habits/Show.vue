@@ -22,7 +22,7 @@
             <div class="xl:col-span-2 space-y-6">
 
                 <!-- Overview Card -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                     <div class="flex items-start justify-between mb-4">
                         <div>
                             <div class="flex items-center gap-2 mb-1">
@@ -59,7 +59,7 @@
                         <span class="text-sm text-gray-500">Overall Progress</span>
                         <span class="text-sm font-semibold text-indigo-600">{{ progressPercent }}%</span>
                     </div>
-                    <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="w-full h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-indigo-500 rounded-full transition-all duration-500"
                              :style="{ width: progressPercent + '%' }">
                         </div>
@@ -70,7 +70,7 @@
                 </div>
 
                 <!-- Completion Chart -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-gray-800">Last 30 Days</h3>
                         <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
@@ -86,39 +86,44 @@
                 </div>
 
                 <!-- Completion History -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm">
-                    <div class="px-6 py-4 border-b border-gray-100">
-                        <h3 class="font-semibold text-gray-800">Completion History</h3>
+                <div v-for="completion in completions" :key="completion.id"
+                     class="flex items-center justify-between px-6 py-3">
+                    <div class="flex items-center gap-3">
+                        <div :class="[
+            'w-8 h-8 rounded-full flex items-center justify-center',
+            completion.is_done ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-800'
+        ]">
+                            <Check v-if="completion.is_done" class="w-4 h-4 text-green-600" />
+                            <X v-else class="w-4 h-4 text-gray-400" />
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {{ formatDate(completion.completed_at) }}
+                            </p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">
+                                {{ completion.count }} / {{ habit.repeat_count }} times
+                            </p>
+                        </div>
                     </div>
-                    <div class="divide-y divide-gray-50">
-                        <div v-if="completions.length === 0"
-                             class="px-6 py-10 text-center text-gray-400 text-sm">
-                            No completions recorded yet
+
+                    <div class="flex items-center gap-3">
+                        <!-- Cheers from friends -->
+                        <div v-if="completion.cheers?.length > 0"
+                             class="flex items-center gap-1">
+            <span v-for="cheer in completion.cheers" :key="cheer.id"
+                  :title="cheer.user?.name"
+                  class="text-sm cursor-default">
+                {{ cheer.emoji }}
+            </span>
+                            <span class="text-xs text-gray-400 dark:text-gray-500 ml-1">
+                {{ completion.cheers.length }} cheer{{ completion.cheers.length !== 1 ? 's' : '' }}
+            </span>
                         </div>
-                        <div v-for="completion in completions" :key="completion.id"
-                             class="flex items-center justify-between px-6 py-3">
-                            <div class="flex items-center gap-3">
-                                <div :class="[
-                                    'w-8 h-8 rounded-full flex items-center justify-center',
-                                    completion.is_done ? 'bg-green-100' : 'bg-gray-100'
-                                ]">
-                                    <Check v-if="completion.is_done" class="w-4 h-4 text-green-600" />
-                                    <X v-else class="w-4 h-4 text-gray-400" />
-                                </div>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-700">
-                                        {{ formatDate(completion.completed_at) }}
-                                    </p>
-                                    <p class="text-xs text-gray-400">
-                                        {{ completion.count }} / {{ habit.repeat_count }} times
-                                    </p>
-                                </div>
-                            </div>
-                            <span :class="completion.is_done ? 'text-green-600 bg-green-50' : 'text-gray-400 bg-gray-50'"
-                                  class="text-xs px-2.5 py-1 rounded-full font-medium">
-                                {{ completion.is_done ? 'Completed' : 'Partial' }}
-                            </span>
-                        </div>
+
+                        <span :class="completion.is_done ? 'text-green-600 bg-green-50 dark:bg-green-900 dark:text-green-400' : 'text-gray-400 bg-gray-50 dark:bg-gray-800'"
+                              class="text-xs px-2.5 py-1 rounded-full font-medium">
+            {{ completion.is_done ? 'Completed' : 'Partial' }}
+        </span>
                     </div>
                 </div>
             </div>
@@ -127,8 +132,8 @@
             <div class="space-y-5">
 
                 <!-- Streak Card -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h3 class="font-semibold text-gray-800 mb-4">Streaks</h3>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Streaks</h3>
                     <div class="space-y-4">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
@@ -160,8 +165,8 @@
                 </div>
 
                 <!-- Details Card -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h3 class="font-semibold text-gray-800 mb-4">Details</h3>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Details</h3>
                     <div class="space-y-3">
                         <div v-for="detail in details" :key="detail.label"
                              class="flex items-center justify-between">
@@ -175,15 +180,15 @@
                 </div>
 
                 <!-- Today's Progress Card -->
-                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h3 class="font-semibold text-gray-800 mb-4">Today</h3>
+                <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h3 class="font-semibold text-gray-800 dark:text-gray-100 mb-4">Today</h3>
                     <div class="flex items-center justify-between mb-3">
                         <span class="text-sm text-gray-500">Check-ins</span>
                         <span class="text-sm font-semibold text-indigo-600">
                             {{ todayCompletion?.count ?? 0 }} / {{ habit.repeat_count }}
                         </span>
                     </div>
-                    <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-indigo-500 rounded-full transition-all"
                              :style="{ width: todayPercent + '%' }">
                         </div>

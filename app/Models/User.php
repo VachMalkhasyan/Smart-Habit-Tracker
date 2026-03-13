@@ -32,6 +32,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'settings',
+        'is_public',
+        'bio',
+        'username',
     ];
 
     /**
@@ -66,7 +70,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'settings' => 'array',
-
+            'is_public'         => 'boolean',
         ];
     }
     public function habits(): HasMany
@@ -82,6 +86,55 @@ class User extends Authenticatable
     public function completions(): HasMany
     {
         return $this->hasMany(Completion::class);
+    }
+
+    public function sentFriendRequests(): HasMany
+    {
+        return $this->hasMany(Friendship::class, 'sender_id');
+    }
+
+    public function receivedFriendRequests(): HasMany
+    {
+        return $this->hasMany(Friendship::class, 'receiver_id');
+    }
+
+    public function friends()
+    {
+        $sent = $this->sentFriendRequests()
+            ->where('status', 'accepted')
+            ->with('receiver')
+            ->get()
+            ->pluck('receiver');
+
+        $received = $this->receivedFriendRequests()
+            ->where('status', 'accepted')
+            ->with('sender')
+            ->get()
+            ->pluck('sender');
+
+        return $sent->merge($received);
+    }
+
+    public function isFriendWith(User $user): bool
+    {
+        return Friendship::where(function ($q) use ($user) {
+            $q->where('sender_id', $this->id)->where('receiver_id', $user->id);
+        })->orWhere(function ($q) use ($user) {
+            $q->where('sender_id', $user->id)->where('receiver_id', $this->id);
+        })->where('status', 'accepted')->exists();
+    }
+
+    public function hasPendingRequestFrom(User $user): bool
+    {
+        return Friendship::where('sender_id', $user->id)
+            ->where('receiver_id', $this->id)
+            ->where('status', 'pending')
+            ->exists();
+    }
+
+    public function cheers(): HasMany
+    {
+        return $this->hasMany(Cheer::class);
     }
 }
 
