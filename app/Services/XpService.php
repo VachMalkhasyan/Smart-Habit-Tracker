@@ -71,6 +71,37 @@ class XpService
         ];
     }
 
+    public static function revoke(User $user, int $amount, string $reason, string $sourceType = null, int $sourceId = null): array
+    {
+        $oldLevel = $user->level;
+
+        // Record XP deductive log
+        XpLog::create([
+            'user_id'     => $user->id,
+            'amount'      => -$amount,
+            'reason'      => $reason,
+            'source_type' => $sourceType,
+            'source_id'   => $sourceId,
+        ]);
+
+        $newXp    = max(0, $user->xp - $amount);
+        $newLevel = self::levelFromXp($newXp);
+
+        $user->update([
+            'xp'    => $newXp,
+            'level' => $newLevel,
+        ]);
+
+        $leveledDown = $newLevel < $oldLevel;
+
+        return [
+            'xp_revoked'  => $amount,
+            'total_xp'    => $newXp,
+            'new_level'   => $newLevel,
+            'leveled_down'=> $leveledDown,
+        ];
+    }
+
     public static function progressToNextLevel(User $user): array
     {
         $currentLevelXp = self::xpForLevel($user->level);
