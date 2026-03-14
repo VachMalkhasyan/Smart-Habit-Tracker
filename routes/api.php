@@ -33,11 +33,24 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
 
         return response()->json([
-            'name'        => $user->name,
-            'level'       => $user->level,
-            'xp'          => $user->xp,
-            'xp_progress' => XpService::progressToNextLevel($user),
-            'habits'      => $habits,
+            'name'           => $user->name,
+            'level'          => $user->level,
+            'xp'             => $user->xp,
+            'xp_progress'    => XpService::progressToNextLevel($user),
+            'dashboard_note' => $user->dashboard_note,
+            'habits'         => $habits,
+            'unread_notifications' => $user->unreadNotifications()
+                ->latest()
+                ->take(5)
+                ->get()
+                ->map(fn($n) => [
+                    'id'      => $n->id,
+                    'icon'    => $n->data['icon'],
+                    'title'   => $n->data['title'],
+                    'message' => $n->data['message'],
+                    'url'     => $n->data['url'],
+                ]),
+            'unread_count' => $user->unreadNotifications()->count(),
         ]);
     });
 
@@ -104,7 +117,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    // Chrome Extension — mark all notifications read
+    Route::post('/extension/notifications/read-all', function (Request $request) {
+        $request->user()->unreadNotifications()->update(['read_at' => now()]);
+        return response()->json(['success' => true, 'unread_count' => 0]);
+    });
+
 });
+
 Route::post('/extension/token', function (Request $request) {
     $request->validate([
         'email'    => 'required|email',

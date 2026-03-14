@@ -64,18 +64,32 @@ class HabitController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'           => 'required|string|max:255',
-            'description'    => 'nullable|string',
-            'category_id'    => 'nullable|exists:habit_categories,id',
-            'goal'           => 'required|integer|min:1',
-            'goal_unit'      => 'required|in:days,weeks,months,years',
-            'repeat_count'   => 'required|integer|min:1|max:20',
-            'start_date'     => 'required|date',
-            'deadline_value' => 'required|integer|min:1',
-            'deadline_unit'  => 'required|in:days,weeks,months,years',
-            'priority'       => 'required|in:1,2,3',
-            'status'         => 'in:active,inactive,completed,paused',
+            'name'              => 'required|string|max:255',
+            'description'       => 'nullable|string',
+            'category_id'       => 'nullable|exists:habit_categories,id',
+            'new_category_name' => 'nullable|string|max:255',
+            'goal'              => 'required|integer|min:1',
+            'goal_unit'         => 'required|in:days,weeks,months,years',
+            'repeat_count'      => 'required|integer|min:1|max:20',
+            'start_date'        => 'required|date',
+            'deadline_value'    => 'nullable|integer|min:1',
+            'deadline_unit'     => 'nullable|in:days,weeks,months,years',
+            'priority'          => 'required|in:1,2,3',
+            'status'            => 'in:active,inactive,completed,paused',
+            'reminder_time'     => 'nullable|date_format:H:i',
         ]);
+
+        if (empty($validated['category_id']) && !empty($validated['new_category_name'])) {
+            $category = HabitCategory::create([
+                'user_id' => $request->user()->id,
+                'name'    => $validated['new_category_name'],
+                'color'   => '#6366f1', // default indigo
+                'icon'    => '✨'
+            ]);
+            $validated['category_id'] = $category->id;
+        }
+
+        unset($validated['new_category_name']);
 
         $request->user()->habits()->create($validated);
 
@@ -135,10 +149,11 @@ class HabitController extends Controller
             'goal_unit'      => 'required|in:days,weeks,months,years',
             'repeat_count'   => 'required|integer|min:1|max:20',
             'start_date'     => 'required|date',
-            'deadline_value' => 'required|integer|min:1',
-            'deadline_unit'  => 'required|in:days,weeks,months,years',
+            'deadline_value' => 'nullable|integer|min:1',
+            'deadline_unit'  => 'nullable|in:days,weeks,months,years',
             'priority'       => 'required|in:1,2,3',
             'status'         => 'required|in:active,inactive,completed,paused',
+            'reminder_time'  => 'nullable|date_format:H:i',
         ]);
 
         $habit->update($validated);

@@ -2,69 +2,82 @@ import { onMounted, onUnmounted } from 'vue'
 import { usePage }     from '@inertiajs/vue3'
 import { toast }       from 'vue-sonner'
 
+let initialized = false;
+let globalHandlers = {
+    onHabitCompleted:       new Set(),
+    onXpAwarded:            new Set(),
+    onFriendActivity:       new Set(),
+    onNotificationReceived: new Set(),
+}
+
 export function useRealtime() {
     const page   = usePage()
-    const userId = page.props.auth.user.id
+    const userId = page.props.auth?.user?.id
 
-    const handlers = {
-        onHabitCompleted: null,
-        onXpAwarded:      null,
-        onFriendActivity: null,
+    const componentHandlers = {
+        onHabitCompleted:       null,
+        onXpAwarded:            null,
+        onFriendActivity:       null,
+        onNotificationReceived: null,
     }
 
-    // Use a flag or check to ensure we only subscribe once if needed,
-    // but listen() adds an event listener. It's safer to manage listeners directly.
-    let channel = null;
-
     onMounted(() => {
-        if (!window.Echo) {
-            console.error('Echo is not defined!');
-            return;
+        if (!userId || !window.Echo) return;
+
+        // Register this component's handlers globally
+        if (componentHandlers.onHabitCompleted)       globalHandlers.onHabitCompleted.add(componentHandlers.onHabitCompleted)
+        if (componentHandlers.onXpAwarded)            globalHandlers.onXpAwarded.add(componentHandlers.onXpAwarded)
+        if (componentHandlers.onFriendActivity)       globalHandlers.onFriendActivity.add(componentHandlers.onFriendActivity)
+        if (componentHandlers.onNotificationReceived) globalHandlers.onNotificationReceived.add(componentHandlers.onNotificationReceived)
+
+        // Initialize Echo channel and listeners ONCE for the whole app
+        if (!initialized) {
+            initialized = true;
+            console.log(`[useRealtime] Connecting to private-user.${userId}`);
+            const channel = window.Echo.private(`user.${userId}`)
+
+            channel.listen('.habit.completed', (e) => {
+                globalHandlers.onHabitCompleted.forEach(fn => fn(e))
+            })
+
+            channel.listen('.xp.awarded', (e) => {
+                globalHandlers.onXpAwarded.forEach(fn => fn(e))
+
+                if (e.leveled_up) {
+                    toast.success(`🎉 Level up! You reached Level ${e.new_level}!`, { duration: 6000 })
+                } else if (e.amount > 0) {
+                    toast.success(`+${e.amount} XP — ${e.reason}`, { duration: 3000 })
+                } else {
+                    toast.warning(`${e.amount} XP — ${e.reason}`, { duration: 3000 })
+                }
+            })
+
+            channel.listen('.friend.activity', (e) => {
+                globalHandlers.onFriendActivity.forEach(fn => fn(e))
+
+                if (e.is_done) {
+                    toast(`🎯 ${e.friend_name} completed "${e.habit_name}"`, { duration: 4000 })
+                }
+            })
+
+            channel.listen('.notification.received', (e) => {
+                globalHandlers.onNotificationReceived.forEach(fn => fn(e))
+                
+                // Show standard flat toast to match existing style instead of rich description
+                toast(`${e.icon || '🔔'} ${e.title}: ${e.message}`, { duration: 5000 })
+            })
         }
-
-        console.log(`[useRealtime] Connecting to private-user.${userId}`);
-        channel = window.Echo.private(`user.${userId}`)
-
-        channel.listen('.habit.completed', (e) => {
-            console.log('[useRealtime] .habit.completed received', e);
-            handlers.onHabitCompleted?.(e)
-        })
-
-        channel.listen('.xp.awarded', (e) => {
-            console.log('[useRealtime] .xp.awarded received', e);
-            handlers.onXpAwarded?.(e)
-
-            if (e.leveled_up) {
-                toast.success(`🎉 Level up! You reached Level ${e.new_level}!`, { duration: 6000 })
-            } else if (e.amount > 0) {
-                toast.success(`+${e.amount} XP — ${e.reason}`, { duration: 3000 })
-            } else {
-                toast.warning(`${e.amount} XP — ${e.reason}`, { duration: 3000 })
-            }
-        })
-
-        channel.listen('.friend.activity', (e) => {
-            console.log('[useRealtime] .friend.activity received', e);
-            handlers.onFriendActivity?.(e)
-
-            if (e.is_done) {
-                toast(`🎯 ${e.friend_name} completed "${e.habit_name}"`, { duration: 4000 })
-            }
-        })
     })
 
     onUnmounted(() => {
-        if (channel) {
-            // Stop listening to specific events to avoid duplicate handlers on remount,
-            // but DONT leave the channel completely because Inertia might have already
-            // mounted the next page's layout which needs this channel.
-            channel.stopListening('.habit.completed');
-            channel.stopListening('.xp.awarded');
-            channel.stopListening('.friend.activity');
-        }
+        // Unregister this component's handlers on unmount
+        if (componentHandlers.onHabitCompleted)       globalHandlers.onHabitCompleted.delete(componentHandlers.onHabitCompleted)
+        if (componentHandlers.onXpAwarded)            globalHandlers.onXpAwarded.delete(componentHandlers.onXpAwarded)
+        if (componentHandlers.onFriendActivity)       globalHandlers.onFriendActivity.delete(componentHandlers.onFriendActivity)
+        if (componentHandlers.onNotificationReceived) globalHandlers.onNotificationReceived.delete(componentHandlers.onNotificationReceived)
     })
 
     return {
-        on: (event, fn) => { handlers[event] = fn },
+        on: (event, fn) => { componentHandlers[event] = fn },
     }
 }

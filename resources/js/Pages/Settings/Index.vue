@@ -302,6 +302,33 @@
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+        <!-- Dirty Banner (fixed bottom) -->
+        <Transition name="banner-slide">
+            <div v-if="isDirty"
+                class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between gap-4 px-6 py-4 bg-white dark:bg-gray-900 border-t border-indigo-200 dark:border-indigo-800 shadow-lg"
+            >
+                <p class="text-sm text-gray-600 dark:text-gray-300 font-medium flex items-center gap-2">
+                    <span class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                    You have unsaved changes
+                </p>
+                <div class="flex items-center gap-3">
+                    <button @click="discardChanges"
+                        class="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                    >Discard</button>
+                    <Button @click="save"
+                        :disabled="form.processing"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm px-5"
+                    >
+                        <Loader2 v-if="form.processing" class="w-3.5 h-3.5 animate-spin" />
+                        <Check v-else class="w-3.5 h-3.5" />
+                        Save Now
+                    </Button>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Unsaved Changes Modal -->
+        <UnsavedChangesModal :show="showModal" @confirm="confirmLeave" @cancel="cancelLeave" />
 
     </AppLayout>
 </template>
@@ -322,6 +349,8 @@ import {
 import { useTheme } from '@/composables/useTheme'
 import {toast} from "vue-sonner";
 import ExportButton from "@/Components/ExportButton.vue";
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
+import UnsavedChangesModal from '@/Components/UnsavedChangesModal.vue'
 
 
 const props = defineProps({
@@ -440,14 +469,56 @@ const priorities = [
 ]
 
 
+// Snapshot the initial form values for dirty comparison
+const originalForm = JSON.stringify({
+    email_reminders:     props.settings?.email_reminders     ?? true,
+    missed_habit_alerts: props.settings?.missed_habit_alerts ?? true,
+    weekly_summary:      props.settings?.weekly_summary      ?? false,
+    reminder_time:       props.settings?.reminder_time       ?? '08:00',
+    weekly_summary_day:  props.settings?.weekly_summary_day  ?? 'monday',
+    theme:               props.settings?.theme               ?? 'system',
+    week_start:          props.settings?.week_start          ?? 'monday',
+    default_priority:    props.settings?.default_priority    ?? 2,
+    default_goal_unit:   props.settings?.default_goal_unit   ?? 'days',
+    shortcuts:           props.settings?.shortcuts           ?? defaultShortcuts,
+    username:            props.settings?.username  ?? '',
+    bio:                 props.settings?.bio       ?? '',
+    is_public:           props.settings?.is_public ?? false,
+})
+
+const isDirty = computed(() => JSON.stringify({
+    email_reminders:     form.email_reminders,
+    missed_habit_alerts: form.missed_habit_alerts,
+    weekly_summary:      form.weekly_summary,
+    reminder_time:       form.reminder_time,
+    weekly_summary_day:  form.weekly_summary_day,
+    theme:               form.theme,
+    week_start:          form.week_start,
+    default_priority:    form.default_priority,
+    default_goal_unit:   form.default_goal_unit,
+    shortcuts:           form.shortcuts,
+    username:            form.username,
+    bio:                 form.bio,
+    is_public:           form.is_public,
+}) !== originalForm)
+
+const { showModal, confirmLeave, cancelLeave, setBypass } = useUnsavedChanges(isDirty)
+
+const discardChanges = () => {
+    const parsed = JSON.parse(originalForm)
+    Object.keys(parsed).forEach(k => form[k] = parsed[k])
+}
+
 // Save
 const save = () => {
+    setBypass(true)
     form.post(route('settings.update'), {
         preserveScroll: true,
         onSuccess: () => {
             const theme = page.props.auth?.user?.settings?.theme ?? 'system'
             applyTheme(theme)
-        }
+        },
+        onError: () => setBypass(false)
     })
 }
 
@@ -472,3 +543,8 @@ const executeDanger = () => {
 }
 
 </script>
+
+<style scoped>
+.banner-slide-enter-active, .banner-slide-leave-active { transition: transform 0.3s ease, opacity 0.3s ease; }
+.banner-slide-enter-from, .banner-slide-leave-to       { transform: translateY(100%); opacity: 0; }
+</style>

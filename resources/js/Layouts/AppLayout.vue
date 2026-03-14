@@ -92,7 +92,14 @@
                     <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ title }}</h1>
                     <p v-if="subtitle" class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{{ subtitle }}</p>
                 </div>
-                <slot name="header-actions" />
+                <div class="flex items-center gap-2">
+                    <slot name="header-actions" />
+                    <NotificationBell
+                        ref="notificationBellRef"
+                        :unreadCount="unreadCount"
+                        @update:unreadCount="unreadCount = $event"
+                    />
+                </div>
             </header>
 
             <!-- Page Content -->
@@ -140,18 +147,21 @@ import GlobalSearch from "@/Components/GlobalSearch.vue";
 import { Search } from 'lucide-vue-next'
 import XpBar from "@/Components/XpBar.vue";
 import { useRealtime } from '@/composables/useRealtime'
+import NotificationBell from '@/Components/NotificationBell.vue'
 
 const props = defineProps({
     title: String,
     subtitle: String,
 })
 
-const collapsed = ref(false)
-const page = usePage()
-const searchOpen    = ref(false)
-const shortcutsOpen = ref(false)
+const collapsed             = ref(false)
+const page                  = usePage()
+const searchOpen            = ref(false)
+const shortcutsOpen         = ref(false)
+const notificationBellRef   = ref(null)
 
-
+// Reactive unread count — initialized from Inertia shared props
+const unreadCount = ref(page.props.unread_notifications_count ?? 0)
 
 
 const toasterTheme = computed(() => {
@@ -205,4 +215,22 @@ on('onXpAwarded', (e) => {
     }
 })
 
+// Real-time notification handler — increment badge and prepend to open panel
+on('onNotificationReceived', (e) => {
+    unreadCount.value++
+    // If bell panel is open, prepend the notification to the list
+    if (notificationBellRef.value) {
+        notificationBellRef.value.prependNotification({
+            id:         e.id ?? crypto.randomUUID(),
+            type:       e.type ?? 'unknown',
+            title:      e.title ?? '',
+            message:    e.message ?? '',
+            icon:       e.icon ?? '🔔',
+            url:        e.url ?? '/dashboard',
+            meta:       e.meta ?? {},
+            read_at:    null,
+            created_at: new Date().toISOString(),
+        })
+    }
+})
 </script>

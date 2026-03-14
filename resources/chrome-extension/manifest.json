@@ -1,14 +1,19 @@
 {
     "manifest_version": 3,
     "name": "Smart Habit Tracker",
-    "version": "1.0.2",
+    "version": "1.0.4",
     "description": "Track habits and run Pomodoro timer from any tab",
-    "permissions": ["storage", "alarms", "notifications", "offscreen"],
+    "permissions": [
+        "storage",
+        "alarms",
+        "notifications",
+        "offscreen"
+    ],
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
-            "16":  "icons/icon16.png",
-            "48":  "icons/icon48.png",
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
             "128": "icons/icon128.png"
         }
     },
@@ -16,8 +21,8 @@
         "service_worker": "background.js"
     },
     "icons": {
-        "16":  "icons/icon16.png",
-        "48":  "icons/icon48.png",
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     }
 }

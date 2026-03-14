@@ -40,6 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'onboarding_completed',
         'xp',
         'level',
+        'dashboard_note',
     ];
 
     /**
@@ -153,6 +154,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pomodoroSessions(): HasMany
     {
         return $this->hasMany(PomodoroSession::class);
+    }
+
+    /**
+     * Channel name for broadcast notifications — matches the existing private user.{id} channel.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return "user.{$this->id}";
     }
 }
 

@@ -68,10 +68,22 @@ class DashboardController extends Controller
             ['id' => 'stat-completed', 'type' => 'StatCardWidget', 'w' => 3, 'h' => 'auto', 'config' => ['statType' => 'completed_all']],
             ['id' => 'stat-streak', 'type' => 'StatCardWidget', 'w' => 3, 'h' => 'auto', 'config' => ['statType' => 'longest_streak']],
             ['id' => 'today-habits', 'type' => 'TodayHabitsWidget', 'w' => 8, 'h' => 'auto', 'is_core' => true],
+            ['id' => 'pinned-note', 'type' => 'DashboardNoteWidget', 'w' => 4, 'h' => 'auto', 'is_core' => true],
             ['id' => 'weekly-progress', 'type' => 'WeeklyProgressWidget', 'w' => 4, 'h' => 'auto', 'is_core' => true],
         ];
 
         $dashboardLayout = $user->settings['dashboard_layout'] ?? $defaultLayout;
+        
+        // Retroactively add pinned note if it doesn't exist in user layout
+        $hasNote = collect($dashboardLayout)->where('type', 'DashboardNoteWidget')->isNotEmpty();
+        if (!$hasNote && isset($user->settings['dashboard_layout'])) {
+            $dashboardLayout[] = ['id' => 'pinned-note', 'type' => 'DashboardNoteWidget', 'w' => 4, 'h' => 'auto', 'is_core' => true];
+            
+            $settings = $user->settings;
+            $settings['dashboard_layout'] = $dashboardLayout;
+            $user->settings = $settings;
+            $user->save();
+        }
 
         return Inertia::render('Dashboard', [
             'habits'         => $habits,
@@ -83,6 +95,7 @@ class DashboardController extends Controller
             'totalCompleted' => $user->habits()->where('status', 'completed')->count(),
             'longestStreak'  => $user->habits()->max('longest_streak') ?? 0,
             'todayCompleted' => $user->completions()->whereDate('completed_at', today())->where('is_done', true)->count(),
+            'dashboard_note' => $user->dashboard_note,
         ]);
     }
 
@@ -99,5 +112,18 @@ class DashboardController extends Controller
         $user->save();
 
         return redirect()->back();
+    }
+
+    public function updateNote(Request $request)
+    {
+        $request->validate([
+            'note' => 'nullable|string|max:2000',
+        ]);
+
+        $request->user()->update([
+            'dashboard_note' => $request->note,
+        ]);
+
+        return response()->json(['success' => true]);
     }
 }

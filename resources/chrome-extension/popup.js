@@ -10,26 +10,32 @@ let timerInterval    = null
 let authToken        = null
 
 // DOM refs
-const notLoggedIn  = document.getElementById('not-logged-in')
-const mainContent  = document.getElementById('main-content')
-const xpBarWrap    = document.getElementById('xp-bar-wrap')
-const timerTime    = document.getElementById('timer-time')
-const timerMode    = document.getElementById('timer-mode')
-const btnToggle    = document.getElementById('btn-toggle')
-const btnReset     = document.getElementById('btn-reset')
-const btnSkip      = document.getElementById('btn-skip')
-const sessionDots  = document.getElementById('session-dots')
-const workInput    = document.getElementById('work-min')
-const breakInput   = document.getElementById('break-min')
-const habitsList   = document.getElementById('habits-list')
-const xpFill       = document.getElementById('xp-fill')
-const xpText       = document.getElementById('xp-text')
-const xpLevel      = document.getElementById('xp-level')
-const levelBadge   = document.getElementById('level-badge')
-const loginEmail   = document.getElementById('login-email')
-const loginPass    = document.getElementById('login-password')
-const btnLogin     = document.getElementById('btn-login')
-const loginError   = document.getElementById('login-error')
+const notLoggedIn   = document.getElementById('not-logged-in')
+const mainContent   = document.getElementById('main-content')
+const xpBarWrap     = document.getElementById('xp-bar-wrap')
+const timerTime     = document.getElementById('timer-time')
+const timerMode     = document.getElementById('timer-mode')
+const btnToggle     = document.getElementById('btn-toggle')
+const btnReset      = document.getElementById('btn-reset')
+const btnSkip       = document.getElementById('btn-skip')
+const sessionDots   = document.getElementById('session-dots')
+const workInput     = document.getElementById('work-min')
+const breakInput    = document.getElementById('break-min')
+const habitsList    = document.getElementById('habits-list')
+const xpFill        = document.getElementById('xp-fill')
+const xpText        = document.getElementById('xp-text')
+const xpLevel       = document.getElementById('xp-level')
+const levelBadge    = document.getElementById('level-badge')
+const loginEmail    = document.getElementById('login-email')
+const loginPass     = document.getElementById('login-password')
+const btnLogin      = document.getElementById('btn-login')
+const loginError    = document.getElementById('login-error')
+const noteContainer = document.getElementById('dashboard-note-container')
+const noteText      = document.getElementById('dashboard-note-text')
+const notifBadge    = document.getElementById('notif-badge')
+const notifSection  = document.getElementById('notifications-section')
+const notifList     = document.getElementById('notif-list')
+const notifCount    = document.getElementById('notif-count-label')
 
 // Init
 document.addEventListener('DOMContentLoaded', async () => {
@@ -172,10 +178,65 @@ async function loadUser() {
         xpText.textContent     = `${data.xp_progress.progress_xp}/${data.xp_progress.needed_xp} XP`
         xpFill.style.width     = `${data.xp_progress.percent}%`
 
+        if (data.dashboard_note) {
+            noteContainer.classList.remove('hidden');
+            noteText.textContent = data.dashboard_note;
+        } else {
+            noteContainer.classList.add('hidden');
+            noteText.textContent = '';
+        }
+
         loadHabits(data.habits)
+        renderNotifications(data.unread_notifications ?? [], data.unread_count ?? 0)
 
     } catch (e) {
         showLogin()
+    }
+}
+
+function renderNotifications(notifications, count) {
+    if (!notifBadge || !notifSection || !notifList || !notifCount) return
+
+    // Update badge on Habits tab
+    if (count > 0) {
+        notifBadge.textContent = count > 9 ? '9+' : count
+        notifBadge.classList.remove('hidden')
+    } else {
+        notifBadge.classList.add('hidden')
+    }
+    notifCount.textContent = count
+
+    // Show/hide section
+    if (notifications.length === 0) {
+        notifSection.classList.add('hidden')
+        return
+    }
+    notifSection.classList.remove('hidden')
+
+    // Render compact rows
+    notifList.innerHTML = notifications.map(n => `
+        <div style="display:flex; align-items:flex-start; gap:8px; padding:8px; background:#f9fafb; border-radius:8px; border-left:3px solid #6366f1;">
+            <span style="font-size:18px; line-height:1;">${n.icon}</span>
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:12px; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${n.title}</div>
+                <div style="font-size:11px; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n.message}</div>
+            </div>
+        </div>
+    `).join('')
+
+    // Mark all read button
+    const btnMarkAll = document.getElementById('btn-mark-all-read')
+    if (btnMarkAll) {
+        btnMarkAll.onclick = async () => {
+            try {
+                await apiPost('/api/extension/notifications/read-all')
+                notifBadge.classList.add('hidden')
+                notifCount.textContent = '0'
+                notifSection.classList.add('hidden')
+            } catch (e) {
+                console.error('Mark all read failed', e)
+            }
+        }
     }
 }
 

@@ -48,3 +48,4 @@ body { width:320px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans
 .success-msg { background:#f0fdf4; color:#16a34a; font-size:12px; padding:8px 10px; border-radius:8px; margin-bottom:10px; }
 .logout-btn { font-size:11px; color:#9ca3af; background:none; border:none; cursor:pointer; padding:0; }
 .logout-btn:hover { color:#6366f1; }
+.notif-tab-badge { display:inline-flex; align-items:center; justify-content:center; background:#ef4444; color:#fff; font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:99px; padding:0 4px; margin-left:4px; line-height:1; vertical-align:middle; }

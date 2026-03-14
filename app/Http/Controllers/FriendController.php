@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\Friendship;
 use App\Models\Completion;
 use App\Models\Cheer;
+use App\Notifications\FriendRequestReceived;
+use App\Notifications\FriendCheeredCompletion;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -91,10 +93,13 @@ class FriendController extends Controller
             return back()->with('error', 'You cannot add yourself!');
         }
 
-        Friendship::firstOrCreate([
+        $friendship = Friendship::firstOrCreate([
             'sender_id'   => $sender->id,
             'receiver_id' => $user->id,
         ], ['status' => 'pending']);
+
+        // Notify receiver of new friend request
+        $user->notify(new FriendRequestReceived($sender));
 
         return back()->with('success', "Friend request sent to {$user->name}!");
     }
@@ -134,6 +139,17 @@ class FriendController extends Controller
             ['user_id' => $request->user()->id, 'completion_id' => $completion->id],
             ['emoji'   => $request->emoji]
         );
+
+        // Notify habit owner that someone cheered their completion
+        $completion->load('habit.user');
+        $habitOwner = $completion->habit->user;
+        if ($habitOwner && $habitOwner->id !== $request->user()->id) {
+            $habitOwner->notify(new FriendCheeredCompletion(
+                $request->user(),
+                $completion->habit->name,
+                $request->emoji
+            ));
+        }
 
         return back()->with('success', 'Cheered!');
     }

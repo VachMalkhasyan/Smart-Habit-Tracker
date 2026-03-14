@@ -52,6 +52,9 @@ class HandleInertiaRequests extends Middleware
                 : 0,
             'onboarding_completed' => $request->user()?->onboarding_completed ?? false,
             'xp_progress' => $request->user() ? \App\Services\XpService::progressToNextLevel($request->user()->fresh()) : null,
+            'unread_notifications_count' => $request->user()
+                ?->unreadNotifications()
+                ->count() ?? 0,
 
         ]);
     }

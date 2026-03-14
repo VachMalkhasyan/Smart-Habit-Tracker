@@ -8,6 +8,7 @@ use App\Http\Controllers\EmailVerificationCodeController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FriendController;
 use App\Http\Controllers\HabitController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\PomodoroController;
 use App\Http\Controllers\SearchController;
@@ -39,6 +40,7 @@ Route::middleware([
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/layout', [DashboardController::class, 'updateLayout'])->name('dashboard.layout.update');
+    Route::patch('/dashboard/note', [DashboardController::class, 'updateNote'])->name('dashboard.note.update');
     Route::post('/habits/reorder', [HabitController::class, 'reorder'])->name('habits.reorder');
     Route::resource('habits', HabitController::class);
 });
@@ -111,4 +113,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/pomodoro',                       [PomodoroController::class, 'store'])->name('pomodoro.store');
     Route::post('/pomodoro/{session}/complete',    [PomodoroController::class, 'complete'])->name('pomodoro.complete');
     Route::post('/pomodoro/{session}/abandon',     [PomodoroController::class, 'abandon'])->name('pomodoro.abandon');
+});
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/notifications',                [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read',    [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::post('/notifications/read-all',     [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::delete('/notifications/{id}',       [NotificationController::class, 'destroy'])->name('notifications.destroy');
 });

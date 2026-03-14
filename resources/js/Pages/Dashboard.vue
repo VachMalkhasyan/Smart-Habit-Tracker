@@ -89,6 +89,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
+import {useRealtime} from "@/composables/useRealtime.js";
 import draggable from 'vuedraggable'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -103,7 +104,7 @@ import TopStreaksWidget from '@/Components/Widgets/TopStreaksWidget.vue'
 import MonthlyTrendWidget from '@/Components/Widgets/MonthlyTrendWidget.vue'
 import PinnedFriendWidget from '@/Components/Widgets/PinnedFriendWidget.vue'
 import QuickPomodoroWidget from '@/Components/Widgets/QuickPomodoroWidget.vue'
-import { useRealtime } from '@/composables/useRealtime'
+import DashboardNoteWidget from '@/Components/Widgets/DashboardNoteWidget.vue'
 
 
 const props = defineProps({
@@ -116,6 +117,7 @@ const props = defineProps({
     totalCompleted: Number,
     longestStreak: Number,
     todayCompleted: Number,
+    dashboard_note: String,
 })
 
 const isEditMode = ref(false)
@@ -129,6 +131,7 @@ const widgetMap = {
     MonthlyTrendWidget,
     PinnedFriendWidget,
     QuickPomodoroWidget,
+    DashboardNoteWidget,
 }
 
 // Registry of all allowed widgets that users can add
@@ -138,6 +141,7 @@ const WIDGET_REGISTRY = [
     { type: 'StatCardWidget', label: 'Stat: Completed All-time', w: 3, config: { statType: 'completed_all' } },
     { type: 'StatCardWidget', label: 'Stat: Longest Streak', w: 3, config: { statType: 'longest_streak' } },
     { type: 'TodayHabitsWidget', label: 'Today\'s Habits List', w: 8 },
+    { type: 'DashboardNoteWidget', label: 'Pinned Note', w: 4 },
     { type: 'WeeklyProgressWidget', label: 'Weekly Chart', w: 4 },
     { type: 'TopStreaksWidget', label: 'Top Streaks List', w: 4 },
     { type: 'MonthlyTrendWidget', label: 'Monthly Trend Chart', w: 4 },
@@ -239,6 +243,8 @@ const getPropsForWidget = (element) => {
             return { ...base, friends: props.friends }
         case 'QuickPomodoroWidget':
             return base
+        case 'DashboardNoteWidget':
+            return { ...base, initialNote: props.dashboard_note }
     }
     return base
 }
