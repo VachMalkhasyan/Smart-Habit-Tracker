@@ -103,6 +103,8 @@ import TopStreaksWidget from '@/Components/Widgets/TopStreaksWidget.vue'
 import MonthlyTrendWidget from '@/Components/Widgets/MonthlyTrendWidget.vue'
 import PinnedFriendWidget from '@/Components/Widgets/PinnedFriendWidget.vue'
 import QuickPomodoroWidget from '@/Components/Widgets/QuickPomodoroWidget.vue'
+import { useRealtime } from '@/composables/useRealtime'
+
 
 const props = defineProps({
     habits: Array,
@@ -154,6 +156,23 @@ const availableWidgets = computed(() => {
         }
         return true
     })
+})
+
+const { on } = useRealtime()
+
+const habits = ref(props.habits)
+const xpProgress = ref(props.xpProgress)
+
+on('onHabitCompleted', (e) => {
+    const habit = habits.value.find(h => h.id === e.habit_id)
+    if (habit) {
+        habit.completed_today  = e.is_done
+        habit.current_streak   = e.current_streak
+    }
+})
+
+on('onXpAwarded', (e) => {
+    xpProgress.value = e.xp_progress
 })
 
 const toggleEditMode = () => {

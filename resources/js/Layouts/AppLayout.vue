@@ -71,6 +71,7 @@
                 <XpBar :xp="$page.props.xp_progress" />
 
 
+
                 <!-- Logout -->
                 <button @click="logout"
                         :class="[
@@ -138,6 +139,8 @@ import {useShortcuts} from "@/composables/useShortcuts.js";
 import GlobalSearch from "@/Components/GlobalSearch.vue";
 import { Search } from 'lucide-vue-next'
 import XpBar from "@/Components/XpBar.vue";
+import { useRealtime } from '@/composables/useRealtime'
+
 const props = defineProps({
     title: String,
     subtitle: String,
@@ -147,6 +150,9 @@ const collapsed = ref(false)
 const page = usePage()
 const searchOpen    = ref(false)
 const shortcutsOpen = ref(false)
+
+
+
 
 const toasterTheme = computed(() => {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
@@ -187,4 +193,16 @@ useShortcuts({
     onHelp:   () => shortcutsOpen.value = true,
     onEscape: () => shortcutsOpen.value = false,
 })
+
+const { on } = useRealtime()
+
+// Make page.props the single source of truth so Inertia navigations and Echo events both update the same object
+on('onXpAwarded', (e) => {
+    if (e.xp_progress) {
+        // Mutating Inertia page props directly is the recommended way to handle 
+        // global state updates in Inertia Vue3 so all components see it
+        page.props.xp_progress = { ...page.props.xp_progress, ...e.xp_progress }
+    }
+})
+
 </script>
