@@ -29,17 +29,23 @@
                         ? 'bg-indigo-600 text-white border-indigo-600'
                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300'
                 ]">
-                {{ categoryIcon(category) }} {{ category }}
+                <span v-if="category !== '✨ AI Suggestions'">{{ categoryIcon(category) }}</span> {{ category }}
             </button>
         </div>
 
-        <!-- Template Groups -->
-        <div v-for="(templates, category) in filteredGroups" :key="category" class="mb-8">
-            <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                {{ categoryIcon(category) }} {{ category }}
-            </h2>
+        <!-- AI Suggestions Tab -->
+        <div v-if="activeCategory === '✨ AI Suggestions'" class="mb-8">
+            <AiHabitSuggestions />
+        </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <!-- Template Groups -->
+        <div v-else>
+            <div v-for="(templates, category) in filteredGroups" :key="category" class="mb-8">
+                <h2 class="font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
+                    {{ categoryIcon(category) }} {{ category }}
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 <div v-for="template in templates" :key="template.id"
                      class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-800 transition-all group cursor-pointer"
                      @click="selectTemplate(template)">
@@ -88,6 +94,7 @@
                     </div>
                 </div>
             </div>
+            </div>
         </div>
 
     </AppLayout>
@@ -97,6 +104,7 @@
 import { ref, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import AiHabitSuggestions from '@/Components/AiHabitSuggestions.vue'
 import { Button } from '@/components/ui/button'
 import { Plus, Target, RefreshCw, ArrowRight } from 'lucide-vue-next'
 
@@ -106,7 +114,10 @@ const props = defineProps({
 
 const activeCategory = ref(null)
 
-const categories = computed(() => Object.keys(props.templateGroups ?? {}))
+const categories = computed(() => {
+    const defaultCats = Object.keys(props.templateGroups ?? {})
+    return [...defaultCats, '✨ AI Suggestions']
+})
 
 const filteredGroups = computed(() => {
     if (!activeCategory.value) return props.templateGroups

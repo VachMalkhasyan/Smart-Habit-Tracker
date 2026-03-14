@@ -368,6 +368,7 @@ const defaultShortcuts = {
     analytics:   'a',
     friends:     'f',
     templates:   't',
+    ai:          'i',
 }
 
 const shortcutList = [
@@ -377,6 +378,7 @@ const shortcutList = [
     { key: 'analytics',  label: 'Analytics',       description: 'Go to analytics page' },
     { key: 'friends',    label: 'Friends',         description: 'Go to friends page' },
     { key: 'templates',  label: 'Templates',       description: 'Go to templates page' },
+    { key: 'ai',         label: 'AI Coach',        description: 'Open your AI Coach' },
     { key: 'categories', label: 'Categories',      description: 'Go to categories' },
     { key: 'settings',   label: 'Settings',        description: 'Go to settings' },
     { key: 'search',     label: 'Focus Search',    description: 'Open global search' },

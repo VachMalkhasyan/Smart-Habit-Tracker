@@ -136,7 +136,8 @@ import {
     BarChart2,
     LayoutTemplate,
     Users,
-    Timer
+    Timer,
+    Bot
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -173,6 +174,7 @@ const navItems = [
     { label: 'New Habit',   href: route('habits.create'), icon: PlusCircle },
     { label: 'Templates',  href: route('templates.index'),  icon: LayoutTemplate },
     { label: 'Analytics',  href: route('analytics'),        icon: BarChart2 },
+    { label: 'AI Coach',   href: route('ai.index'),         icon: Bot },
     { label: 'Categories',  href: route('categories.index'), icon: Tag },
     { label: 'Friends', href: route('friends.index'), icon: Users },
     { label: 'Settings',    href: route('settings'),     icon: Settings },

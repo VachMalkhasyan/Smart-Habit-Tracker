@@ -14,6 +14,7 @@ use App\Http\Controllers\PomodoroController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
+use App\Http\Controllers\AiController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -121,3 +122,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/notifications/read-all',     [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::delete('/notifications/{id}',       [NotificationController::class, 'destroy'])->name('notifications.destroy');
 });
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::prefix('ai')->group(function () {
+        Route::get('/coach', [AiController::class, 'page'])->name('ai.index');
+        Route::get('/suggest-habits', [AiController::class, 'suggestHabits'])->name('ai.suggest-habits');
+        Route::get('/conversations', [AiController::class, 'index'])->name('ai.conversations.index');
+        Route::post('/conversations', [AiController::class, 'store'])->name('ai.conversations.store');
+        Route::get('/conversations/{conversation}', [AiController::class, 'show'])->name('ai.conversations.show');
+        Route::post('/conversations/{conversation}/chat', [AiController::class, 'chat'])->name('ai.conversations.chat');
+        Route::delete('/conversations/{conversation}', [AiController::class, 'destroy'])->name('ai.conversations.destroy');
+    });
+});
+
