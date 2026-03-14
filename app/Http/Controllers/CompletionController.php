@@ -2,20 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\FriendActivityUpdated;
+use App\Events\HabitCompleted;
+use App\Events\XpAwarded;
 use App\Models\Habit;
 use App\Models\Completion;
 use App\Services\XpService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CompletionController extends Controller
 {
     public function toggle(Request $request, Habit $habit)
     {
-        $today      = now()->toDateString();
-        $user       = $request->user();
+        $today = now()->toDateString();
+        $user = $request->user();
         $completion = $habit->completions()->firstOrCreate(
-            ['completed_at' => $today],
-            ['user_id' => $user->id, 'count' => 0, 'is_done' => false]
+        ['completed_at' => $today],
+        ['user_id' => $user->id, 'count' => 0, 'is_done' => false]
         );
 
         $wasFirstToday = !$user->completions()
@@ -25,22 +29,56 @@ class CompletionController extends Controller
             ->exists();
 
         $wasDone = $completion->is_done;
-        
+
         $completion->update([
             'is_done' => !$completion->is_done,
-            'count'   => !$completion->is_done ? $habit->repeat_count : 0,
+            'count' => !$completion->is_done ? $habit->repeat_count : 0,
         ]);
 
         if ($completion->is_done) {
             $xpResult = $this->awardXpIfNeeded($completion, $habit, $user, $wasFirstToday);
             $message = 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP';
-        } else {
+        }
+        else {
             $xpResult = $this->revokeXpIfNeeded($habit, $user);
             $message = 'Habit unchecked. XP revoked.';
         }
+        broadcast(new HabitCompleted(
+            $user,
+            $habit,
+            $completion->is_done,
+            $habit->fresh()->current_streak,
+            ))->toOthers();
+
+        if ($completion->is_done) {
+            if ($xpResult && isset($xpResult['xp_awarded'])) {
+                broadcast(new XpAwarded(
+                    $user->fresh(),
+                    $xpResult['xp_awarded'],
+                    "Completed: {$habit->name}",
+                    $xpResult['leveled_up'] ?? false,
+                    $xpResult['new_level'] ?? $user->level,
+                    ));
+            }
+        }
+        else {
+            if ($xpResult && isset($xpResult['xp_revoked']) && $xpResult['xp_revoked'] > 0) {
+                broadcast(new XpAwarded(
+                    $user->fresh(),
+                    -$xpResult['xp_revoked'],
+                    "Unchecked: {$habit->name}",
+                    false,
+                    $user->fresh()->level,
+                    ));
+            }
+        }
+
+        if ($completion->is_done) {
+            broadcast(new FriendActivityUpdated($user, $habit, true));
+        }
 
         return back()->with([
-            'success'   => $message,
+            'success' => $message,
             'xp_result' => $xpResult,
         ]);
     }
@@ -48,8 +86,8 @@ class CompletionController extends Controller
     public function increment(Request $request, Habit $habit)
     {
         $completion = Completion::firstOrCreate(
-            ['habit_id' => $habit->id, 'user_id' => $request->user()->id, 'completed_at' => today()],
-            ['count' => 0, 'is_done' => false]
+        ['habit_id' => $habit->id, 'user_id' => $request->user()->id, 'completed_at' => today()],
+        ['count' => 0, 'is_done' => false]
         );
 
         $wasDone = $completion->is_done;
@@ -68,7 +106,7 @@ class CompletionController extends Controller
             $xpResult = $this->awardXpIfNeeded($completion, $habit, $request->user(), $wasFirstToday);
 
             return back()->with([
-                'success'   => 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP',
+                'success' => 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP',
                 'xp_result' => $xpResult,
             ]);
         }
@@ -81,8 +119,8 @@ class CompletionController extends Controller
     public function decrement(Request $request, Habit $habit)
     {
         $completion = Completion::where([
-            'habit_id'     => $habit->id,
-            'user_id'      => $request->user()->id,
+            'habit_id' => $habit->id,
+            'user_id' => $request->user()->id,
             'completed_at' => today(),
         ])->first();
 
@@ -91,13 +129,13 @@ class CompletionController extends Controller
             $completion->count = max($completion->count - 1, 0);
             $completion->is_done = $completion->count >= $habit->repeat_count;
             $completion->save();
-            
+
             $this->updateStreak($habit);
 
             if ($wasDone && !$completion->is_done) {
                 $xpResult = $this->revokeXpIfNeeded($habit, $request->user());
                 return back()->with([
-                    'success'   => 'Habit unchecked. XP revoked.',
+                    'success' => 'Habit unchecked. XP revoked.',
                     'xp_result' => $xpResult,
                 ]);
             }
@@ -108,33 +146,33 @@ class CompletionController extends Controller
 
     private function updateStreak(Habit $habit)
     {
-        // Recalculate current streak
+        $dates = Completion::where('habit_id', $habit->id)
+            ->where('is_done', true)
+            ->pluck('completed_at')
+            ->map(fn($d) => $d->toDateString())
+            ->flip();
+
         $streak = 0;
-        $date = today();
+        $date = today()->toDateString();
 
-        while (true) {
-            $exists = Completion::where('habit_id', $habit->id)
-                ->whereDate('completed_at', $date)
-                ->where('is_done', true)
-                ->exists();
-
-            if (!$exists) break;
-
+        while (isset($dates[$date])) {
             $streak++;
-            $date = $date->subDay();
+            $date = Carbon::parse($date)->subDay()->toDateString();
         }
 
-        $habit->current_streak = $streak;
-        $habit->longest_streak = max($habit->longest_streak, $streak);
-        $habit->save();
+        $habit->update([
+            'current_streak' => $streak,
+            'longest_streak' => max($habit->longest_streak, $streak),
+        ]);
     }
 
     private function awardXpIfNeeded(Completion $completion, Habit $habit, $user, bool $wasFirstToday)
     {
-        if (!$completion->is_done) return null;
+        if (!$completion->is_done)
+            return null;
 
         $today = now()->toDateString();
-        
+
         $awardedLogs = \App\Models\XpLog::where('user_id', $user->id)
             ->where('source_type', 'habit')
             ->where('source_id', $habit->id)
@@ -147,43 +185,38 @@ class CompletionController extends Controller
         $this->updateStreak($habit);
 
         if ($alreadyReceivedBaseXpToday) {
-            return null; // Already fully awarded and currently checked
+            return null;
         }
 
-        // Base XP for completing habit
         $xpResult = XpService::award(
             $user, XpService::XP_COMPLETE_HABIT,
             "Completed habit: {$habit->name}",
             'habit', $habit->id
         );
 
-        // ONLY award bonuses if this is the FIRST time this habit is completed today
         if (!$hasAnyLogToday) {
-            // Bonus: first habit of the day
-        if ($wasFirstToday) {
-            XpService::award($user, XpService::XP_FIRST_HABIT_DAY,
-                'First habit of the day! 🌅');
-        }
+            if ($wasFirstToday) {
+                XpService::award($user, XpService::XP_FIRST_HABIT_DAY,
+                    'First habit of the day! 🌅');
+            }
 
-        // Bonus: streak
-        if ($habit->fresh()->current_streak > 0 && $habit->fresh()->current_streak % 7 === 0) {
-            $streakBonus = $habit->current_streak * XpService::XP_STREAK_BONUS;
-            XpService::award($user, $streakBonus,
-                "🔥 {$habit->current_streak}-day streak on {$habit->name}!");
-        }
+            if ($habit->fresh()->current_streak > 0 && $habit->fresh()->current_streak % 7 === 0) {
+                $streakBonus = $habit->current_streak * XpService::XP_STREAK_BONUS;
+                XpService::award($user, $streakBonus,
+                    "🔥 {$habit->current_streak}-day streak on {$habit->name}!");
+            }
 
-        // Bonus: all habits done today
-        $totalActive = $user->habits()->where('status', 'active')->count();
-        $doneToday   = $user->completions()
-            ->whereDate('completed_at', $today)
-            ->where('is_done', true)
-            ->count();
+            $totalActive = $user->habits()->where('status', 'active')->count();
+            $doneToday = $user->completions()
+                ->whereDate('completed_at', $today)
+                ->where('is_done', true)
+                ->count();
 
-        if ($totalActive > 0 && $doneToday >= $totalActive) {
-            XpService::award($user, XpService::XP_ALL_HABITS_DONE,
-                '🎯 All habits completed today!');
+            if ($totalActive > 0 && $doneToday >= $totalActive) {
+                XpService::award($user, XpService::XP_ALL_HABITS_DONE,
+                    '🎯 All habits completed today!');
+            }
         }
-        } // End of bonus block
 
         return $xpResult;
     }
@@ -192,7 +225,6 @@ class CompletionController extends Controller
     {
         $today = now()->toDateString();
 
-        // Check if XP was actually awarded for this habit today
         $awardedLogs = \App\Models\XpLog::where('user_id', $user->id)
             ->where('source_type', 'habit')
             ->where('source_id', $habit->id)
@@ -201,22 +233,19 @@ class CompletionController extends Controller
             ->get();
 
         if ($awardedLogs->isEmpty()) {
-            return null; // No XP was awarded, nothing to revoke
+            return null;
         }
 
         $totalRevoked = 0;
         foreach ($awardedLogs as $log) {
             $totalRevoked += $log->amount;
             XpService::revoke(
-                $user, 
-                $log->amount, 
-                "Revoked XP for unchecking habit: {$habit->name}", 
-                'habit_revoke', 
+                $user,
+                $log->amount,
+                "Revoked XP for unchecking habit: {$habit->name}",
+                'habit_revoke',
                 $habit->id
             );
-            // Update the log amount to 0 instead of deleting it.
-            // This leaves a record that the habit was completed today at least once,
-            // preventing bonuses from being farmed if it is checked again.
             $log->update(['amount' => 0]);
         }
 

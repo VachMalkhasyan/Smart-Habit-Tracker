@@ -228,6 +228,9 @@ import {
     Search, Users, UserPlus, UserMinus,
     Flame, Check, X
 } from 'lucide-vue-next'
+import { useRealtime } from '@/composables/useRealtime'
+
+
 
 const props = defineProps({
     friends:         Array,
@@ -259,6 +262,24 @@ watch(searchQuery, (val) => {
     }, 300)
 })
 
+const activityFeed = ref(props.activityFeed ?? [])
+
+const { on } = useRealtime()
+
+on('onFriendActivity', (e) => {
+    activityFeed.value.unshift({
+        friend_name:   e.friend_name,
+        friend_avatar: e.friend_avatar,
+        habit_name:    e.habit_name,
+        is_done:       e.is_done,
+        timestamp:     e.timestamp,
+    })
+
+    // Keep feed at max 20 items
+    if (activityFeed.value.length > 20) {
+        activityFeed.value = activityFeed.value.slice(0, 20)
+    }
+})
 // Friend actions
 const sendRequest = (user) => {
     router.post(route('friends.request', user.id), {}, {
