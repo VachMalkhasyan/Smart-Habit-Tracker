@@ -31,6 +31,7 @@
         "clsx": "^2.1.1",
         "dayjs": "^1.11.20",
         "lucide-vue-next": "^0.577.0",
+        "marked": "^17.0.4",
         "reka-ui": "^2.9.1",
         "tailwind-merge": "^3.5.0",
         "tailwindcss-animate": "^1.0.7",

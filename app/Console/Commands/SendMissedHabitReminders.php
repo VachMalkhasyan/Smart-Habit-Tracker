@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Mail\MissedHabitReminder;
+use App\Mail\SendMissedHabitReminders as MissedHabitReminderMail;
 use App\Models\User;
+use App\Notifications\HabitStreakAtRisk;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\MissedHabitReminder;
 
 class SendMissedHabitReminders extends Command
 {
@@ -41,9 +43,17 @@ class SendMissedHabitReminders extends Command
 
                     if ($missedHabits->isEmpty()) continue;
 
+                    // Send email
                     Mail::to($user->email)->send(
                         new MissedHabitReminder($user, $missedHabits)
                     );
+
+                    // Send in-app streak-at-risk notifications for habits with active streaks
+                    foreach ($missedHabits as $habit) {
+                        if ($habit->current_streak > 0) {
+                            $user->notify(new HabitStreakAtRisk($habit));
+                        }
+                    }
 
                     $this->info("Sent missed reminder to {$user->email} ({$missedHabits->count()} habits)");
                 }

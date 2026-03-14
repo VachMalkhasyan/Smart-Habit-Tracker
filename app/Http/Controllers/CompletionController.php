@@ -7,6 +7,7 @@ use App\Events\HabitCompleted;
 use App\Events\XpAwarded;
 use App\Models\Habit;
 use App\Models\Completion;
+use App\Notifications\AllHabitsDoneToday;
 use App\Services\XpService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -215,6 +216,16 @@ class CompletionController extends Controller
             if ($totalActive > 0 && $doneToday >= $totalActive) {
                 XpService::award($user, XpService::XP_ALL_HABITS_DONE,
                     '🎯 All habits completed today!');
+
+                // Send AllHabitsDoneToday notification (only once — check it hasn't been sent today)
+                $alreadyNotified = $user->notifications()
+                    ->where('type', \App\Notifications\AllHabitsDoneToday::class)
+                    ->whereDate('created_at', $today)
+                    ->exists();
+
+                if (!$alreadyNotified) {
+                    $user->notify(new AllHabitsDoneToday($totalActive));
+                }
             }
         }
 

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\XpLog;
+use App\Notifications\LeveledUp;
 
 class XpService
 {
@@ -61,6 +62,10 @@ class XpService
                 'reason'  => "Reached level {$newLevel}! 🎉",
             ]);
             $user->increment('xp', self::XP_LEVEL_MILESTONE);
+
+            // Send LeveledUp notification (database + broadcast)
+            $levelTitle = self::getLevelTitle($newLevel);
+            $user->notify(new LeveledUp($newLevel, $levelTitle, $user->fresh()->xp));
         }
 
         return [

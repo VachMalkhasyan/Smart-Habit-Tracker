@@ -15,7 +15,12 @@ class Habit extends Model
         'user_id', 'category_id', 'name', 'description',
         'goal', 'goal_unit', 'status', 'start_date',
         'deadline_value', 'deadline_unit', 'repeat_count',
-        'priority', 'current_streak', 'longest_streak'
+        'priority',
+        'order',
+        'current_streak',
+        'longest_streak',
+        'dashboard_note',
+        'reminder_time',
     ];
 
     protected $casts = [
