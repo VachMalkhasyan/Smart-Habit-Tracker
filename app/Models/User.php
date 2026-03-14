@@ -41,6 +41,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'xp',
         'level',
         'dashboard_note',
+        'daily_affirmation',
+        'affirmation_date',
     ];
 
     /**
@@ -162,6 +164,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function receivesBroadcastNotificationsOn(): string
     {
         return "user.{$this->id}";
+    }
+
+    /**
+     * AI Conversations for this user
+     */
+    public function aiConversations(): HasMany
+    {
+        return $this->hasMany(AiConversation::class);
     }
 }
 
