@@ -12,6 +12,15 @@
 
         <!-- Category tabs -->
         <div class="flex gap-2 flex-wrap mb-6">
+            <button @click="activeCategory = '✨ AI For You'"
+                    :class="[
+                    'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
+                    activeCategory === '✨ AI For You'
+                        ? 'bg-indigo-600 text-white border-indigo-600'
+                        : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                ]">
+                ✨ AI For You
+            </button>
             <button @click="activeCategory = null"
                     :class="[
                     'px-4 py-2 rounded-xl text-sm font-medium transition-all border',
@@ -29,12 +38,12 @@
                         ? 'bg-indigo-600 text-white border-indigo-600'
                         : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-indigo-300'
                 ]">
-                <span v-if="category !== '✨ AI Suggestions'">{{ categoryIcon(category) }}</span> {{ category }}
+                <span>{{ categoryIcon(category) }}</span> {{ category }}
             </button>
         </div>
 
         <!-- AI Suggestions Tab -->
-        <div v-if="activeCategory === '✨ AI Suggestions'" class="mb-8">
+        <div v-if="activeCategory === '✨ AI For You'" class="mb-8">
             <AiHabitSuggestions />
         </div>
 
@@ -112,11 +121,10 @@ const props = defineProps({
     templateGroups: Object,
 })
 
-const activeCategory = ref(null)
+const activeCategory = ref('✨ AI For You')
 
 const categories = computed(() => {
-    const defaultCats = Object.keys(props.templateGroups ?? {})
-    return [...defaultCats, '✨ AI Suggestions']
+    return Object.keys(props.templateGroups ?? {})
 })
 
 const filteredGroups = computed(() => {

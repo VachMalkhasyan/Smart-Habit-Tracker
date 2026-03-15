@@ -74,6 +74,22 @@ Route::get('/analytics', [AnalyticsController::class, 'index'])
     ->name('analytics')
     ->middleware(['auth', 'verified']);
 
+Route::post('/analytics/weekly-summary/generate', function (\Illuminate\Http\Request $request) {
+    $user = $request->user();
+
+    // Rate limit: only regenerate once per day
+    if ($user->last_weekly_summary_date?->isToday()) {
+        return response()->json([
+            'summary' => $user->last_weekly_summary,
+            'cached'  => true,
+        ]);
+    }
+
+    $summary = app(\App\Services\AiService::class)->generateWeeklySummary($user);
+
+    return response()->json(['summary' => $summary, 'cached' => false]);
+})->middleware(['auth', 'verified'])->name('analytics.weekly-summary');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/templates',          [TemplateController::class, 'index'])->name('templates.index');
     Route::get('/templates/{template}',[TemplateController::class, 'show'])->name('templates.show');

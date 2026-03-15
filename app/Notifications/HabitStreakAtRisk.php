@@ -19,14 +19,18 @@ class HabitStreakAtRisk extends Notification implements ShouldBroadcastNow
 
     public function toArray(object $notifiable): array
     {
+        $aiService = app(\App\Services\AiService::class);
+        $message   = $aiService->generateStreakCoachMessage($notifiable, $this->habit);
+
         return [
             'type'    => 'streak_at_risk',
-            'title'   => 'Streak at risk!',
-            'message' => "Your '{$this->habit->name}' streak of {$this->habit->current_streak} days is at risk — complete it today!",
+            'title'   => '🔥 Streak at risk!',
+            'message' => $message,
             'icon'    => '🔥',
             'url'     => "/habits/{$this->habit->id}",
             'meta'    => [
                 'habit_id'    => $this->habit->id,
+                'habit_name'  => $this->habit->name,
                 'streak_days' => $this->habit->current_streak,
             ],
         ];

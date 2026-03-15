@@ -614,7 +614,7 @@
 </template>
 
 <script setup>
-import {computed, ref, watch} from 'vue'
+import {computed, ref, watch, onMounted} from 'vue'
 import {Link, router, useForm} from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -773,6 +773,15 @@ const submit = () => {
         })
     }
 }
+
+onMounted(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('name'))      form.name      = params.get('name')
+    if (params.get('category'))  form.new_category_name = params.get('category')
+    if (params.get('goal'))      form.goal      = parseInt(params.get('goal'))
+    if (params.get('goal_unit')) form.goal_unit = params.get('goal_unit')
+    if (params.get('priority'))  form.priority  = parseInt(params.get('priority'))
+})
 </script>
 
 <style scoped>

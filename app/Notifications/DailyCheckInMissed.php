@@ -18,14 +18,19 @@ class DailyCheckInMissed extends Notification implements ShouldBroadcastNow
 
     public function toArray(object $notifiable): array
     {
+        $aiService = app(\App\Services\AiService::class);
+        
+        // If an affirmation was passed, use it. Otherwise generate/fetch one from AI.
+        $message = $this->affirmation ?: $aiService->generateDailyAffirmation($notifiable);
+
         return [
             'type'    => 'daily_missed',
             'title'   => 'We miss you!',
-            'message' => $this->affirmation,
+            'message' => $message,
             'icon'    => '🌱',
             'url'     => '/dashboard',
             'meta'    => [
-                'affirmation' => $this->affirmation,
+                'affirmation' => $message,
             ],
         ];
     }

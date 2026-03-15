@@ -29,6 +29,7 @@ export function useRealtime() {
         if (componentHandlers.onXpAwarded)            globalHandlers.onXpAwarded.add(componentHandlers.onXpAwarded)
         if (componentHandlers.onFriendActivity)       globalHandlers.onFriendActivity.add(componentHandlers.onFriendActivity)
         if (componentHandlers.onNotificationReceived) globalHandlers.onNotificationReceived.add(componentHandlers.onNotificationReceived)
+        if (componentHandlers.onWeeklySummaryReady)   globalHandlers.onWeeklySummaryReady.add(componentHandlers.onWeeklySummaryReady)
 
         // Initialize Echo channel and listeners ONCE for the whole app
         if (!initialized) {
@@ -63,6 +64,11 @@ export function useRealtime() {
             channel.listen('.notification.received', (e) => {
                 globalHandlers.onNotificationReceived.forEach(fn => fn(e))
                 
+                // If it's a weekly summary notification, refresh analytics data
+                if (e.type === 'weekly_summary') {
+                    globalHandlers.onWeeklySummaryReady.forEach(fn => fn(e))
+                }
+
                 // Show standard flat toast to match existing style instead of rich description
                 toast(`${e.icon || '🔔'} ${e.title}: ${e.message}`, { duration: 5000 })
             })

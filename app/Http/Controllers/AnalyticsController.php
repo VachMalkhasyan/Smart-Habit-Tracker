@@ -86,6 +86,7 @@ class AnalyticsController extends Controller
             'activeDays'       => $activeDays,
             'bestStreak'       => $bestStreak,
             'avgCompletionRate' => round($avgCompletionRate),
+            'weekly_summary'    => $user->last_weekly_summary,
         ]);
     }
 }
