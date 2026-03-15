@@ -43,6 +43,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'dashboard_note',
         'daily_affirmation',
         'affirmation_date',
+        'last_weekly_summary',
+        'last_weekly_summary_date',
     ];
 
     /**
@@ -81,8 +83,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'onboarding_completed' => 'boolean',
             'xp'                   => 'integer',
             'level'                => 'integer',
-
-
+            'last_weekly_summary'  => 'array',
+            'last_weekly_summary_date' => 'date',
         ];
     }
     public function habits(): HasMany

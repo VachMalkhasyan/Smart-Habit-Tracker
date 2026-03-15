@@ -13,12 +13,12 @@ export function useShortcuts(extras = {}) {
             settings:    's',
             search:      '/',
             help:        '?',
-            analytics:   'a',
+            analytics:   'n',
             friends:     'f',
             templates:   't',
             onboarding:  'o',
             ai:          'i',
-
+            ai_assistant: 'a',
         }
     }
 
@@ -37,6 +37,15 @@ export function useShortcuts(extras = {}) {
 
         if (key === shortcuts.help && extras.onHelp) {
             extras.onHelp()
+            return
+        }
+
+        if (key === shortcuts.ai_assistant) {
+            if (extras.onAiAssistant) {
+                extras.onAiAssistant()
+            } else {
+                window.dispatchEvent(new CustomEvent('toggle-ai-widget'))
+            }
             return
         }
 

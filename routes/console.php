@@ -14,6 +14,7 @@ Schedule::command('habits:missed-reminders')->dailyAt('09:00');
 Schedule::command('habits:daily-reminders')->everyMinute();
 
 Schedule::command('habits:weekly-summaries')->dailyAt('09:00');
+Schedule::command('habits:weekly-ai-summary')->weeklyOn(1, '09:00');
 
 // Generate daily affirmations for all users at midnight
 Schedule::call(function () {

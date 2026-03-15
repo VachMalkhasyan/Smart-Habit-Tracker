@@ -118,6 +118,8 @@
             :visibleToasts="5"
             offset="20px"
         />
+        <!-- Global AI Chat Widget -->
+        <AiChatWidget v-if="!page.url.startsWith('/ai/coach')" />
     </div>
 </template>
 
@@ -149,6 +151,7 @@ import { Search } from 'lucide-vue-next'
 import XpBar from "@/Components/XpBar.vue";
 import { useRealtime } from '@/composables/useRealtime'
 import NotificationBell from '@/Components/NotificationBell.vue'
+import AiChatWidget from '@/Components/AiChatWidget.vue'
 
 const props = defineProps({
     title: String,
@@ -199,11 +202,7 @@ useShortcuts({
         searchOpen.value    = false
         shortcutsOpen.value = false
     },
-    onSearch: () => searchOpen.value = true,  // ← add this
-})
-useShortcuts({
-    onHelp:   () => shortcutsOpen.value = true,
-    onEscape: () => shortcutsOpen.value = false,
+    onSearch: () => searchOpen.value = true,
 })
 
 const { on } = useRealtime()

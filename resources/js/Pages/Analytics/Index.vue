@@ -5,6 +5,14 @@
             <ExportButton />
         </template>
 
+        <div class="mb-8">
+            <WeeklyAiSummaryCard
+                :summary="weeklySummary"
+                :loading="summaryLoading"
+                @regenerate="generateSummary"
+            />
+        </div>
+
         <!-- Overview Stats -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
             <div v-for="stat in overviewStats" :key="stat.label"
@@ -181,10 +189,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import ExportButton from '@/Components/ExportButton.vue'
+import WeeklyAiSummaryCard from '@/Components/WeeklyAiSummaryCard.vue'
 import { Flame, CalendarCheck, Award, TrendingUp, Activity } from 'lucide-vue-next'
+import axios from 'axios'
+import { useRealtime } from '@/composables/useRealtime'
 import dayjs from 'dayjs'
 
 const props = defineProps({
@@ -196,6 +207,30 @@ const props = defineProps({
     activeDays:        Number,
     bestStreak:        Number,
     avgCompletionRate: Number,
+    weekly_summary:    Object,
+})
+
+const weeklySummary = ref(props.weekly_summary)
+const summaryLoading = ref(false)
+
+const generateSummary = async () => {
+    summaryLoading.value = true
+    try {
+        const { data } = await axios.post('/analytics/weekly-summary/generate')
+        weeklySummary.value = data.summary
+    } catch (e) {
+        console.error('Failed to generate weekly summary:', e)
+    } finally {
+        summaryLoading.value = false
+    }
+}
+
+const { on } = useRealtime()
+
+onMounted(() => {
+    on('onWeeklySummaryReady', async () => {
+        await generateSummary()
+    })
 })
 
 // Overview stats

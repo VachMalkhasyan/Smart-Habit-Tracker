@@ -365,10 +365,11 @@ const defaultShortcuts = {
     settings:    's',
     search:      '/',
     help:        '?',
-    analytics:   'a',
+    analytics:   'n',
     friends:     'f',
     templates:   't',
     ai:          'i',
+    ai_assistant: 'a',
 }
 
 const shortcutList = [
@@ -379,6 +380,7 @@ const shortcutList = [
     { key: 'friends',    label: 'Friends',         description: 'Go to friends page' },
     { key: 'templates',  label: 'Templates',       description: 'Go to templates page' },
     { key: 'ai',         label: 'AI Coach',        description: 'Open your AI Coach' },
+    { key: 'ai_assistant', label: 'AI Mini-Chat',  description: 'Toggle floating AI assistant' },
     { key: 'categories', label: 'Categories',      description: 'Go to categories' },
     { key: 'settings',   label: 'Settings',        description: 'Go to settings' },
     { key: 'search',     label: 'Focus Search',    description: 'Open global search' },

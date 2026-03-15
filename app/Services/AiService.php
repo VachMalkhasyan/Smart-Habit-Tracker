@@ -13,7 +13,9 @@
 namespace App\Services;
 
 use App\Models\AiConversation;
+use App\Models\Habit;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -333,7 +335,8 @@ Respond ONLY with a valid JSON array matching this exact schema, do not include 
     \"reason\": \"Why this makes sense for them\",
     \"category\": \"Category Name\",
     \"goal\": 30,
-    \"goal_unit\": \"days\"
+    \"goal_unit\": \"days\",
+    \"priority\": 2
   }
 ]";
 
@@ -390,8 +393,176 @@ Respond ONLY with a valid JSON array matching this exact schema, do not include 
                 "reason" => "A foundational micro-habit everyone benefits from.",
                 "category" => "Health",
                 "goal" => 30,
-                "goal_unit" => "days"
+                "goal_unit" => "days",
+                "priority" => 2
             ]
         ];
     }
+
+    /**
+     * Generate a personalized motivational message when a streak is at risk
+     */
+    public function generateStreakCoachMessage(User $user, Habit $habit): string
+    {
+        $cacheKey = "streak_coach_{$user->id}_{$habit->id}_" . today()->toDateString();
+
+        return Cache::remember($cacheKey, now()->endOfDay(), function () use ($user, $habit) {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.groq.key'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model'      => 'llama-3.3-70b-versatile',
+                'max_tokens' => 150,
+                'messages'   => [
+                    [
+                        'role'    => 'system',
+                        'content' => "You write short, personal, motivational messages for a habit tracking app.
+                                      Be specific, warm, and direct. Max 2 sentences. No generic advice.
+                                      Never start with 'I'. Sound like a supportive friend.",
+                    ],
+                    [
+                        'role'    => 'user',
+                        'content' => "Write a streak protection message for {$user->name}.
+                                      Habit: '{$habit->name}'
+                                      Current streak: {$habit->current_streak} days
+                                      Longest ever streak: {$habit->longest_streak} days
+                                      They missed yesterday. Today is their chance to restart.
+                                      Make it personal and specific to this habit.",
+                    ],
+                ],
+            ]);
+
+            return $response->json('choices.0.message.content')
+                ?? "Your {$habit->name} streak needs you today 🔥";
+        });
+    }
+
+    /**
+     * Generate a personalized weekly summary analysis
+     */
+    public function generateWeeklySummary(User $user): array
+    {
+        $weekStart = now()->subDays(7)->toDateString();
+        $weekEnd   = now()->toDateString();
+
+        // Completions per day
+        $completions = $user->completions()
+            ->whereBetween('completed_at', [$weekStart, $weekEnd])
+            ->where('is_done', true)
+            ->with('habit')
+            ->get();
+
+        // Active habits count
+        $totalHabits = $user->habits()->where('status', 'active')->count();
+
+        // Completion rate per habit
+        $habitStats = $user->habits()
+            ->where('status', 'active')
+            ->withCount(['completions as completed_this_week' => function ($q) use ($weekStart, $weekEnd) {
+                $q->whereBetween('completed_at', [$weekStart, $weekEnd])
+                  ->where('is_done', true);
+            }])
+            ->get()
+            ->map(fn($h) => [
+                'name'       => $h->name,
+                'completed'  => $h->completed_this_week,
+                'rate'       => 7 > 0
+                    ? round(($h->completed_this_week / 7) * 100)
+                    : 0,
+                'streak'     => $h->current_streak,
+            ]);
+
+        // Best and worst day
+        $byDay = $completions->groupBy(fn($c) => \Carbon\Carbon::parse($c->completed_at)->toDateString())
+            ->map(fn($c) => $c->count())
+            ->sortDesc();
+
+        $bestDay  = $byDay->keys()->first();
+        $worstDay = $byDay->keys()->last();
+
+        // Overall completion rate
+        $totalPossible   = $totalHabits * 7;
+        $totalCompleted  = $completions->count();
+        $overallRate     = $totalPossible > 0
+            ? round(($totalCompleted / $totalPossible) * 100)
+            : 0;
+
+        $dataContext = "
+User: {$user->name}
+Week: {$weekStart} to {$weekEnd}
+Overall completion rate: {$overallRate}%
+Total habits completed: {$totalCompleted} of {$totalPossible} possible
+Best day: {$bestDay} ({$byDay->first()} habits done)
+Worst day: {$worstDay} ({$byDay->last()} habits done)
+
+Per-habit breakdown:
+" . $habitStats->map(fn($h) =>
+    "- {$h['name']}: {$h['completed']}/7 days ({$h['rate']}%) | streak: {$h['streak']} days"
+)->implode("\n");
+
+        $prompt = "
+Based on this user's habit data from the past week, generate a weekly summary.
+Respond ONLY with a valid JSON object, no preamble, no markdown:
+{
+  \"what_went_well\": \"2-3 sentences celebrating specific wins with real numbers\",
+  \"needs_attention\": \"2-3 sentences about specific habits that struggled, be honest but kind\",
+  \"suggestion\": \"One specific, actionable suggestion for next week based on their patterns\",
+  \"overall_rate\": {$overallRate},
+  \"best_habit\": \"name of the habit with highest completion rate\",
+  \"worst_habit\": \"name of the habit with lowest completion rate\",
+  \"best_day\": \"{$bestDay}\",
+  \"headline\": \"One short punchy headline summarizing the week (max 8 words)\"
 }
+
+Data:
+{$dataContext}
+";
+
+        // DEVELOPMENT: Groq
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'      => 'llama-3.3-70b-versatile',
+            'max_tokens' => 600,
+            'messages'   => [
+                ['role' => 'system', 'content' => 'You are a habit coach. Respond only with valid JSON.'],
+                ['role' => 'user',   'content' => $prompt],
+            ],
+        ]);
+
+        $content = $response->json('choices.0.message.content');
+
+        // Strip any accidental markdown fences
+        $clean   = preg_replace('/```json|```/', '', $content);
+        $summary = json_decode(trim($clean), true);
+
+        if (!$summary || !isset($summary['what_went_well'])) {
+            $summary = [
+                'what_went_well'  => "You completed {$totalCompleted} habits this week.",
+                'needs_attention' => "Keep pushing — consistency builds over time.",
+                'suggestion'      => "Try to complete at least one habit every day next week.",
+                'overall_rate'    => $overallRate,
+                'best_habit'      => $habitStats->sortByDesc('rate')->first()['name'] ?? '—',
+                'worst_habit'     => $habitStats->sortBy('rate')->first()['name'] ?? '—',
+                'best_day'        => $bestDay ?? '—',
+                'headline'        => "Week {$overallRate}% complete",
+            ];
+        }
+
+        // Add raw stats for frontend
+        $summary['total_completed'] = $totalCompleted;
+        $summary['total_possible']  = $totalPossible;
+        $summary['habit_stats']     = $habitStats->toArray();
+        $summary['generated_at']    = now()->toISOString();
+
+        $user->update([
+            'last_weekly_summary'      => $summary,
+            'last_weekly_summary_date' => today(),
+        ]);
+
+        return $summary;
+    }
+}
+
+
