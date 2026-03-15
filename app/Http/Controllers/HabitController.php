@@ -92,6 +92,8 @@ class HabitController extends Controller
         unset($validated['new_category_name']);
 
         $request->user()->habits()->create($validated);
+        
+        $request->user()->update(['last_weekly_summary_date' => null]);
 
         return Redirect::route('habits.index')->with('success', 'Habit created!');
     }
@@ -157,6 +159,8 @@ class HabitController extends Controller
         ]);
 
         $habit->update($validated);
+        
+        $request->user()->update(['last_weekly_summary_date' => null]);
 
         return Redirect::route('habits.index')->with('success', 'Habit updated!');
     }
@@ -170,25 +174,26 @@ class HabitController extends Controller
             abort(403);
         }
 
+        $user = request()->user();
         $habit->delete();
+        $user->update(['last_weekly_summary_date' => null]);
 
         return redirect()->route('habits.index')->with('success', 'Habit deleted.');
     }
 
-    public function reorder(Request $request)
+    public function reorder(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
-            'ordered_ids'   => 'required|array',
-            'ordered_ids.*' => 'integer|exists:habits,id',
+            'habits'   => 'required|array',
+            'habits.*' => 'integer|exists:habits,id',
         ]);
 
-        $user = $request->user();
-        $orderedIds = $request->input('ordered_ids');
-        
-        foreach ($orderedIds as $index => $id) {
-            $user->habits()->where('id', $id)->update(['priority' => $index + 1]);
+        foreach ($request->habits as $index => $habitId) {
+            Habit::where('id', $habitId)
+                ->where('user_id', $request->user()->id) // security check
+                ->update(['order' => $index]);
         }
 
-        return redirect()->back();
+        return response()->json(['success' => true]);
     }
 }

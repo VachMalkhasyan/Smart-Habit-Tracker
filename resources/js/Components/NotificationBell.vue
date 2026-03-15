@@ -141,8 +141,11 @@ const bellRef       = ref(null)
 
 // Expose a method for parent to prepend a new notification
 function prependNotification(notif) {
-    notifications.value.unshift(notif)
-    triggerBellRing()
+    const exists = notifications.value.find(n => n.id === notif.id)
+    if (!exists) {
+        notifications.value.unshift(notif)
+        triggerBellRing()
+    }
 }
 defineExpose({ prependNotification })
 

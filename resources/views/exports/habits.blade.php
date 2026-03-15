@@ -25,7 +25,7 @@
 </head>
 <body>
 <div class="header">
-    <h1>HabitFlow — Habits Report</h1>
+    <h1>GrowthZone — Habits Report</h1>
     <p>{{ $user->name }} · Generated {{ now()->format('F j, Y') }}</p>
 </div>
 
@@ -62,6 +62,6 @@
     </tbody>
 </table>
 
-<div class="footer">HabitFlow · {{ $habits->count() }} habits total</div>
+<div class="footer">GrowthZone · {{ $habits->count() }} habits total</div>
 </body>
 </html>

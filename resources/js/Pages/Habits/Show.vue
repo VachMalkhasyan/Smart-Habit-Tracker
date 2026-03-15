@@ -255,6 +255,8 @@ const props = defineProps({
     todayCompletion: Object,
 })
 
+const habit = ref(props.habit)
+
 const isDark = computed(() =>
     document.documentElement.classList.contains('dark')
 )
@@ -263,13 +265,13 @@ const confirmDelete = ref(false)
 
 // Progress
 const progressPercent = computed(() =>
-    Math.min(Math.round((props.habit.current_streak / props.habit.goal) * 100), 100)
+    Math.min(Math.round((habit.value.current_streak / habit.value.goal) * 100), 100)
 )
 
 // Today percent
 const todayPercent = computed(() => {
     const count = props.todayCompletion?.count ?? 0
-    return Math.min(Math.round((count / props.habit.repeat_count) * 100), 100)
+    return Math.min(Math.round((count / habit.value.repeat_count) * 100), 100)
 })
 
 // Completion rate (last 30 days)
@@ -281,11 +283,11 @@ const completionRate = computed(() => {
 
 // Details list
 const details = computed(() => [
-    { label: 'Start Date',  value: dayjs(props.habit.start_date).format('MMM D, YYYY'), icon: Calendar },
-    { label: 'Duration',    value: `${props.habit.deadline_value} ${props.habit.deadline_unit}`, icon: RefreshCw },
-    { label: 'Goal',        value: `${props.habit.goal} ${props.habit.goal_unit}`, icon: Target },
-    { label: 'Priority',    value: { 1: 'High', 2: 'Medium', 3: 'Low' }[props.habit.priority], icon: Flag },
-    { label: 'End Date',    value: dayjs(props.habit.start_date).add(props.habit.deadline_value, props.habit.deadline_unit).format('MMM D, YYYY'), icon: Calendar },
+    { label: 'Start Date',  value: dayjs(habit.value.start_date).format('MMM D, YYYY'), icon: Calendar },
+    { label: 'Duration',    value: `${habit.value.deadline_value} ${habit.value.deadline_unit}`, icon: RefreshCw },
+    { label: 'Goal',        value: `${habit.value.goal} ${habit.value.goal_unit}`, icon: Target },
+    { label: 'Priority',    value: { 1: 'High', 2: 'Medium', 3: 'Low' }[habit.value.priority], icon: Flag },
+    { label: 'End Date',    value: dayjs(habit.value.start_date).add(habit.value.deadline_value, habit.value.deadline_unit).format('MMM D, YYYY'), icon: Calendar },
 ])
 
 // Helpers
@@ -330,18 +332,28 @@ const areaChartSeries = [{
 
 // Actions
 const toggleToday = () => {
-    router.post(route('completions.toggle', props.habit.id), {}, { preserveScroll: true })
+    router.post(route('completions.toggle', habit.value.id), {}, { preserveScroll: true })
 }
 
 const incrementToday = () => {
-    router.post(route('completions.increment', props.habit.id), {}, { preserveScroll: true })
+    router.post(route('completions.increment', habit.value.id), {}, { preserveScroll: true })
 }
 
 const decrementToday = () => {
-    router.post(route('completions.decrement', props.habit.id), {}, { preserveScroll: true })
+    router.post(route('completions.decrement', habit.value.id), {}, { preserveScroll: true })
 }
 
 const deleteHabit = () => {
-    router.delete(route('habits.destroy', props.habit.id))
+    router.delete(route('habits.destroy', habit.value.id))
 }
+
+import { useRealtime } from '@/composables/useRealtime'
+const { on } = useRealtime()
+
+on('onHabitCompleted', (e) => {
+    if (e.habit_id === habit.value.id) {
+        habit.value.completed_today = e.is_done
+        habit.value.current_streak  = e.current_streak
+    }
+})
 </script>

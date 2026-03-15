@@ -15,7 +15,7 @@
                                 @click="switchMode(mode.key)"
                                 :class="[
                                 'px-5 py-2 rounded-xl text-sm font-medium transition-all border',
-                                currentMode === mode.key
+                                pomodoro.currentMode === mode.key
                                     ? 'bg-indigo-600 text-white border-indigo-600'
                                     : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-indigo-300'
                             ]">
@@ -38,10 +38,10 @@
                         </svg>
                         <div class="absolute inset-0 flex flex-col items-center justify-center">
                             <span class="text-5xl font-bold text-gray-900 dark:text-gray-100 tabular-nums">
-                                {{ formattedTime }}
+                                {{ pomodoro.formattedTime }}
                             </span>
                             <span class="text-sm text-gray-400 dark:text-gray-500 mt-1 capitalize">
-                                {{ currentMode === 'work' ? 'Focus time' : 'Break time' }}
+                                {{ pomodoro.currentMode === 'work' ? 'Focus time' : 'Break time' }}
                             </span>
                         </div>
                     </div>
@@ -51,19 +51,19 @@
                         <div v-for="i in 4" :key="i"
                              :class="[
                                 'w-3 h-3 rounded-full transition-all',
-                                i <= sessionsCompleted % 4
+                                i <= totalSessionsCount % 4 || (totalSessionsCount > 0 && totalSessionsCount % 4 === 0 && i === 4)
                                     ? 'bg-indigo-500'
                                     : 'bg-gray-200 dark:bg-gray-700'
                             ]">
                         </div>
                         <span class="text-sm text-gray-400 dark:text-gray-500 ml-2">
-                            {{ sessionsCompleted }} sessions today
+                            {{ totalSessionsCount }} sessions today
                         </span>
                     </div>
 
                     <!-- Controls -->
                     <div class="flex items-center justify-center gap-4">
-                        <button @click="resetTimer"
+                        <button @click="pomodoro.reset()"
                                 class="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-all">
                             <RotateCcw class="w-5 h-5" />
                         </button>
@@ -71,15 +71,15 @@
                         <button @click="toggleTimer"
                                 :class="[
                                 'w-20 h-20 rounded-full flex items-center justify-center text-white transition-all shadow-lg',
-                                isRunning
+                                pomodoro.isRunning
                                     ? 'bg-red-500 hover:bg-red-600'
                                     : 'bg-indigo-600 hover:bg-indigo-700'
                             ]">
-                            <Pause v-if="isRunning" class="w-8 h-8" />
+                            <Pause v-if="pomodoro.isRunning" class="w-8 h-8" />
                             <Play v-else class="w-8 h-8 ml-1" />
                         </button>
 
-                        <button @click="skipSession"
+                        <button @click="pomodoro.sessionComplete()"
                                 class="w-12 h-12 rounded-full border-2 border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:border-indigo-300 hover:text-indigo-500 transition-all">
                             <SkipForward class="w-5 h-5" />
                         </button>
@@ -90,9 +90,9 @@
                         <label class="text-sm text-gray-500 dark:text-gray-400 mb-2 block">
                             Working on:
                         </label>
-                        <select v-model="selectedHabit"
+                        <select v-model="pomodoro.selectedHabit"
                                 class="w-full max-w-xs mx-auto block text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
-                            <option value="">— No habit —</option>
+                            <option :value="null">— No habit —</option>
                             <option v-for="h in habits" :key="h.id" :value="h.id">
                                 {{ h.name }}
                             </option>
@@ -111,8 +111,8 @@
                             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1.5 block">
                                 Work duration (min)
                             </label>
-                            <input v-model.number="settings.workMinutes" type="number"
-                                   min="1" max="120" :disabled="isRunning"
+                            <input v-model.number="pomodoro.workMinutes" type="number"
+                                   min="1" max="120" :disabled="pomodoro.isRunning"
                                    @change="applySettings"
                                    class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 disabled:opacity-50" />
                         </div>
@@ -120,8 +120,8 @@
                             <label class="text-xs text-gray-500 dark:text-gray-400 mb-1.5 block">
                                 Break duration (min)
                             </label>
-                            <input v-model.number="settings.breakMinutes" type="number"
-                                   min="1" max="60" :disabled="isRunning"
+                            <input v-model.number="pomodoro.breakMinutes" type="number"
+                                   min="1" max="60" :disabled="pomodoro.isRunning"
                                    @change="applySettings"
                                    class="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600 disabled:opacity-50" />
                         </div>
@@ -130,7 +130,7 @@
                     <div class="flex gap-2 mt-3">
                         <button v-for="preset in presets" :key="preset.label"
                                 @click="applyPreset(preset)"
-                                :disabled="isRunning"
+                                :disabled="pomodoro.isRunning"
                                 class="text-xs px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 text-gray-500 dark:text-gray-400 transition-all disabled:opacity-40">
                             {{ preset.label }}
                         </button>
@@ -208,10 +208,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Play, Pause, RotateCcw, SkipForward, Settings2 } from 'lucide-vue-next'
+import { usePomodoroStore } from '@/stores/pomodoroStore'
 
 const props = defineProps({
     sessions:    Array,
@@ -220,8 +221,8 @@ const props = defineProps({
     xpProgress:  Object,
 })
 
-// Settings
-const settings = ref({ workMinutes: 25, breakMinutes: 5 })
+const pomodoro = usePomodoroStore()
+
 const presets = [
     { label: '🍅 Classic 25/5',  workMinutes: 25, breakMinutes: 5  },
     { label: '🔥 Deep 50/10',    workMinutes: 50, breakMinutes: 10 },
@@ -229,40 +230,29 @@ const presets = [
 ]
 
 const applyPreset = (preset) => {
-    settings.value.workMinutes  = preset.workMinutes
-    settings.value.breakMinutes = preset.breakMinutes
+    pomodoro.workMinutes  = preset.workMinutes
+    pomodoro.breakMinutes = preset.breakMinutes
     applySettings()
 }
-
-// Timer state
-const currentMode        = ref('work')
-const isRunning          = ref(false)
-const timeLeft           = ref(settings.value.workMinutes * 60)
-const sessionsCompleted  = ref(props.stats?.today_sessions ?? 0)
-const selectedHabit      = ref('')
-const currentSessionId   = ref(null)
-let   interval           = null
 
 const modes = [
     { key: 'work',  label: '🍅 Focus' },
     { key: 'break', label: '☕ Break' },
 ]
 
+const totalSessionsCount = computed(() => {
+    return (props.stats?.today_sessions ?? 0) + pomodoro.sessionsCount
+})
+
 const circumference = 2 * Math.PI * 45
 const totalSeconds  = computed(() =>
-    currentMode.value === 'work'
-        ? settings.value.workMinutes * 60
-        : settings.value.breakMinutes * 60
+    pomodoro.currentMode === 'work'
+        ? pomodoro.workMinutes * 60
+        : pomodoro.breakMinutes * 60
 )
 const dashOffset = computed(() =>
-    circumference - (timeLeft.value / totalSeconds.value) * circumference
+    circumference - (pomodoro.timeLeft / totalSeconds.value) * circumference
 )
-
-const formattedTime = computed(() => {
-    const m = Math.floor(timeLeft.value / 60).toString().padStart(2, '0')
-    const s = (timeLeft.value % 60).toString().padStart(2, '0')
-    return `${m}:${s}`
-})
 
 const levelTitle = computed(() => {
     const l = props.xpProgress?.level ?? 1
@@ -276,7 +266,7 @@ const levelTitle = computed(() => {
 })
 
 const statCards = computed(() => [
-    { label: 'Today\'s sessions', value: props.stats?.today_sessions ?? 0 },
+    { label: 'Today\'s sessions', value: totalSessionsCount.value },
     { label: 'This week',         value: props.stats?.this_week ?? 0 },
     { label: 'Total sessions',    value: props.stats?.total_sessions ?? 0 },
     { label: 'Total focus time',  value: `${props.stats?.total_minutes ?? 0}m` },
@@ -288,80 +278,21 @@ const formatDate = (dt) => {
 }
 
 // Timer controls
-const toggleTimer = async () => {
-    if (!isRunning.value) {
-        if (!currentSessionId.value) {
-            const { data } = await axios.post(route('pomodoro.store'), {
-                work_minutes:  settings.value.workMinutes,
-                break_minutes: settings.value.breakMinutes,
-                habit_id:      selectedHabit.value || null,
-            })
-            currentSessionId.value = data.id
-        }
-        isRunning.value = true
-        interval = setInterval(tick, 1000)
-    } else {
-        isRunning.value = false
-        clearInterval(interval)
-    }
-}
-
-const tick = () => {
-    if (timeLeft.value <= 0) {
-        sessionDone()
-    } else {
-        timeLeft.value--
-    }
-}
-
-const sessionDone = async () => {
-    clearInterval(interval)
-    isRunning.value = false
-
-    if (currentMode.value === 'work') {
-        sessionsCompleted.value++
-
-        // Complete on backend + award XP
-        if (currentSessionId.value) {
-            await axios.post(route('pomodoro.complete', currentSessionId.value), {
-                sessions_completed: 1,
-                total_minutes: settings.value.workMinutes,
-            })
-            currentSessionId.value = null
-        }
-
-        // Switch to break
-        switchMode('break')
-        new Audio('https://www.soundjay.com/buttons/beep-07.wav').play().catch(() => {})
-    } else {
-        switchMode('work')
-    }
+const toggleTimer = () => {
+    if (!pomodoro.isRunning)  pomodoro.start()
+    else                      pomodoro.pause()
 }
 
 const switchMode = (mode) => {
-    currentMode.value = mode
-    timeLeft.value    = mode === 'work'
-        ? settings.value.workMinutes * 60
-        : settings.value.breakMinutes * 60
+    pomodoro.currentMode = mode
+    pomodoro.timeLeft    = mode === 'work'
+        ? pomodoro.workMinutes * 60
+        : pomodoro.breakMinutes * 60
 }
-
-const resetTimer = async () => {
-    clearInterval(interval)
-    isRunning.value = false
-    timeLeft.value = totalSeconds.value
-    if (currentSessionId.value) {
-        await axios.post(route('pomodoro.abandon', currentSessionId.value))
-        currentSessionId.value = null
-    }
-}
-
-const skipSession = () => sessionDone()
 
 const applySettings = () => {
-    if (!isRunning.value) {
-        timeLeft.value = settings.value.workMinutes * 60
+    if (!pomodoro.isRunning) {
+        pomodoro.timeLeft = (pomodoro.currentMode === 'work' ? pomodoro.workMinutes : pomodoro.breakMinutes) * 60
     }
 }
-
-onUnmounted(() => clearInterval(interval))
 </script>

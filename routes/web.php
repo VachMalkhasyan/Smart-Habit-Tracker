@@ -15,6 +15,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\AiController;
+use App\Http\Controllers\MoodController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -93,6 +94,7 @@ Route::post('/analytics/weekly-summary/generate', function (\Illuminate\Http\Req
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/templates',          [TemplateController::class, 'index'])->name('templates.index');
     Route::get('/templates/{template}',[TemplateController::class, 'show'])->name('templates.show');
+    Route::post('/templates/{template}/quick-add', [TemplateController::class, 'quickAdd'])->name('templates.quick-add');
 });
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/friends',                          [FriendController::class, 'index'])->name('friends.index');
@@ -140,6 +142,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/mood',              [MoodController::class, 'index'])->name('mood.index');
+    Route::post('/mood',             [MoodController::class, 'store'])->name('mood.store');
+    Route::put('/mood/{mood}',       [MoodController::class, 'update'])->name('mood.update');
+    Route::get('/mood/today',        [MoodController::class, 'today'])->name('mood.today');
+    Route::get('/mood/history',      [MoodController::class, 'history'])->name('mood.history');
+
+    Route::post('/mood/affirmation/regenerate', function (\Illuminate\Http\Request $request) {
+        $affirmation = app(\App\Services\AiService::class)
+            ->generateDailyAffirmation($request->user()->fresh(), forceRegenerate: true);
+
+        return response()->json(['affirmation' => $affirmation]);
+    })->name('mood.affirmation.regenerate');
+
     Route::prefix('ai')->group(function () {
         Route::get('/coach', [AiController::class, 'page'])->name('ai.index');
         Route::get('/suggest-habits', [AiController::class, 'suggestHabits'])->name('ai.suggest-habits');

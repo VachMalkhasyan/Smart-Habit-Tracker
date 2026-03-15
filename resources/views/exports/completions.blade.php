@@ -19,7 +19,7 @@
 </head>
 <body>
 <div class="header">
-    <h1>HabitFlow — Completion History</h1>
+    <h1>GrowthZone — Completion History</h1>
     <p>{{ $user->name }} · Generated {{ now()->format('F j, Y') }} · Last 100 entries</p>
 </div>
 
@@ -46,6 +46,6 @@
     </tbody>
 </table>
 
-<div class="footer">HabitFlow · {{ $completions->count() }} records shown</div>
+<div class="footer">GrowthZone · {{ $completions->count() }} records shown</div>
 </body>
 </html>

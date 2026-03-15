@@ -41,12 +41,15 @@ class AiService
         // For now, we'll keep the completion rate and weak days as placeholders for future expansion
 
             
-        // Assuming completions relationship exists or just fake it if we don't have the full model in memory
-        $weakDays = "Monday: 40% completion, Sunday: 20% completion"; // Mocked based on user prompt example
+        $moodThisWeek = $user->moodLogs()->thisWeek()->orderBy('logged_date')->get();
+        $moodContext  = $moodThisWeek->isEmpty()
+            ? 'Not tracking mood yet'
+            : $moodThisWeek->map(fn($m) =>
+                "{$m->logged_date->format('D')}: {$m->emoji} {$m->label} ({$m->score}/5)"
+                . ($m->note ? " — \"{$m->note}\"" : '')
+              )->implode(', ');
 
-        $moodLog = "Not yet tracking mood"; // Placeholder as mood logging isn't fully implemented yet
         $recentDiary = "No diary entries yet"; // Placeholder
-
         $goals = $user->settings['goals'] ?? 'None explicitly set';
 
         return "You are a personal habit coach and life assistant for {$user->name}.
@@ -67,7 +70,8 @@ THEIR GOALS (from onboarding):
 {$goals}
 
 MOOD THIS WEEK:
-{$moodLog}
+{$moodContext}
+Weekly average: {$user->weeklyMoodAverage()}/5
 
 RECENT DIARY:
 {$recentDiary}
@@ -257,63 +261,70 @@ INSTRUCTIONS:
     }
 
     /**
-     * Generate daily affirmation at midnight
+     * Generate daily affirmation based on mood and habit performance
      */
-    public function generateDailyAffirmation(User $user): string
+    public function generateDailyAffirmation(User $user, bool $forceRegenerate = false): string
     {
-        if ($user->affirmation_date === now()->toDateString()) {
-            return $user->daily_affirmation ?? '';
+        // Skip if already generated today (unless forced)
+        if (!$forceRegenerate
+            && $user->affirmation_date?->isToday()
+            && $user->daily_affirmation) {
+            return $user->daily_affirmation;
         }
 
-        $habitsCount = $user->habits()->where('status', 'active')->count();
+        $mood         = $user->todaysMood();
+        $moodContext  = $mood
+            ? "Today's mood: {$mood->emoji} {$mood->label} ({$mood->score}/5)"
+              . ($mood->note ? ", note: \"{$mood->note}\"" : '')
+            : 'No mood logged today yet';
 
-        // ============================================
-        // PRODUCTION: Claude Haiku (Anthropic)
-        // ============================================
-        // $response = Http::withHeaders([
-        //     'x-api-key'         => config('services.anthropic.key'),
-        //     'anthropic-version' => '2023-06-01',
-        //     'content-type'      => 'application/json',
-        // ])->post('https://api.anthropic.com/v1/messages', [
-        //     'model'      => 'claude-haiku-4-5-20251001',
-        //     'max_tokens' => 150,
-        //     'system'     => "You are a personal habit coach. They currently have {$habitsCount} active habits. Speak directly to them.",
-        //     'messages'   => [
-        //         [
-        //             'role'    => 'user',
-        //             'content' => "Give me a deeply encouraging, poetic, but completely grounded daily affirmation. 2 sentences maximum."
-        //         ]
-        //     ],
-        // ]);
-        // $affirmation = $response->successful() ? $response->json('content.0.text') : tap('You have the power to shape your days. One habit at a time, you are building the life you want.');
-        // ============================================
+        $streakContext = $user->habits()
+            ->where('status', 'active')
+            ->where('current_streak', '>', 0)
+            ->orderByDesc('current_streak')
+            ->first();
 
-        // ============================================
-        // DEVELOPMENT: Groq (free tier)
-        // ============================================
+        $completedToday = $user->completions()
+            ->whereDate('completed_at', today())
+            ->where('is_done', true)
+            ->count();
+
+        $totalHabits = $user->habits()->where('status', 'active')->count();
+
+        // DEVELOPMENT: Groq
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
         ])->post('https://api.groq.com/openai/v1/chat/completions', [
             'model'      => 'llama-3.3-70b-versatile',
-            'max_tokens' => 150,
+            'max_tokens' => 120,
             'messages'   => [
                 [
                     'role'    => 'system',
-                    'content' => "You are a personal habit coach. They currently have {$habitsCount} active habits. Speak directly to them."
+                    'content' => "You write one short personal affirmation (max 2 sentences) for a habit
+                                  tracking app user. Be warm, specific to their data, never generic.
+                                  Reference their actual mood or habits. Sound like a caring friend.
+                                  Never start with 'I'. No hashtags.",
                 ],
                 [
                     'role'    => 'user',
-                    'content' => "Give me a deeply encouraging, poetic, but completely grounded daily affirmation. 2 sentences maximum."
-                ]
+                    'content' => "Write a personalized affirmation for {$user->name}.
+                                  {$moodContext}
+                                  Habits completed today: {$completedToday} of {$totalHabits}
+                                  Best current streak: " . ($streakContext
+                                      ? "{$streakContext->name} at {$streakContext->current_streak} days"
+                                      : 'none yet') . "
+                                  Make it feel personal to their exact situation right now.",
+                ],
             ],
         ]);
-        $affirmation = $response->successful() ? $response->json('choices.0.message.content') : 'You have the power to shape your days. One habit at a time, you are building the life you want.';
-        // ============================================
+
+        $affirmation = $response->json('choices.0.message.content')
+            ?? "Every step forward counts — keep going {$user->name} 💙";
 
         $user->update([
             'daily_affirmation' => $affirmation,
-            'affirmation_date' => now()->toDateString(),
+            'affirmation_date'  => today(),
         ]);
 
         return $affirmation;

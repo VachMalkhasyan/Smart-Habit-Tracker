@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Restore timer state
     chrome.storage.local.get(
         ['timerSeconds','timerEndTime','timerRunning','currentMode','workMin','breakMin','sessionCount','authToken'],
-        (data) => {
+        async (data) => {
             if (data.authToken)    authToken    = data.authToken
             
             if (data.timerRunning && data.timerEndTime && data.timerEndTime > Date.now()) {
@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Background alarm already finished it while popup was closed
                 fetchLatestState()
             }
+            
+            if (authToken) {
+                await syncWithApp()
+            }
         }
     )
 
@@ -72,6 +76,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupTimerEvents()
     setupLoginForm()
 })
+
+async function syncWithApp() {
+    try {
+        const res  = await apiGet('/api/extension/pomodoro')
+        const data = await res.json()
+
+        if (data.has_active_session && !timerRunning) {
+            // App has active session — calculate remaining time
+            const startedAt  = new Date(data.session.started_at)
+            const elapsed    = Math.floor((Date.now() - startedAt) / 1000)
+            const totalSecs  = data.session.work_minutes * 60
+            const remaining  = Math.max(0, totalSecs - elapsed)
+
+            workMin      = data.session.work_minutes
+            breakMin     = data.session.break_minutes
+            timerSeconds = remaining
+            currentMode  = 'work'
+
+            updateTimerDisplay()
+            // Assume habit is handled/displayed if wanted
+        }
+    } catch (e) {
+        console.log('Sync failed', e)
+    }
+}
 
 // Auth check
 async function checkAuth() {

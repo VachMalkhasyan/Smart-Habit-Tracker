@@ -95,6 +95,7 @@ import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
 import Dropdown from '@/Components/Dropdown.vue'
 import { Plus, Settings, GripHorizontal, X, LayoutDashboard, Lock } from 'lucide-vue-next'
+import { useChartTheme } from '@/composables/useChartTheme'
 
 // Import all widgets
 import StatCardWidget from '@/Components/Widgets/StatCardWidget.vue'
@@ -105,6 +106,10 @@ import MonthlyTrendWidget from '@/Components/Widgets/MonthlyTrendWidget.vue'
 import PinnedFriendWidget from '@/Components/Widgets/PinnedFriendWidget.vue'
 import QuickPomodoroWidget from '@/Components/Widgets/QuickPomodoroWidget.vue'
 import DashboardNoteWidget from '@/Components/Widgets/DashboardNoteWidget.vue'
+import MoodCheckIn from '@/Components/MoodCheckIn.vue'
+import AffirmationCard from '@/Components/AffirmationCard.vue'
+import MoodWidget from '@/Components/Widgets/MoodWidget.vue'
+import AffirmationWidget from '@/Components/Widgets/AffirmationWidget.vue'
 
 
 const props = defineProps({
@@ -132,6 +137,8 @@ const widgetMap = {
     PinnedFriendWidget,
     QuickPomodoroWidget,
     DashboardNoteWidget,
+    MoodWidget,
+    AffirmationWidget,
 }
 
 // Registry of all allowed widgets that users can add
@@ -147,6 +154,8 @@ const WIDGET_REGISTRY = [
     { type: 'MonthlyTrendWidget', label: 'Monthly Trend Chart', w: 4 },
     { type: 'PinnedFriendWidget', label: 'Pinned Friend Activity', w: 4 },
     { type: 'QuickPomodoroWidget', label: 'Quick Pomodoro', w: 4 },
+    { type: 'MoodWidget', label: 'Daily Mood Check-in', w: 4 },
+    { type: 'AffirmationWidget', label: 'Daily AI Affirmation', w: 4 },
 ]
 
 // Allow multiple instances except for singletons like TodayHabits
@@ -163,6 +172,8 @@ const availableWidgets = computed(() => {
 })
 
 const { on } = useRealtime()
+
+const { chartTheme } = useChartTheme()
 
 const habits = ref(props.habits)
 const xpProgress = ref(props.xpProgress)
@@ -245,6 +256,10 @@ const getPropsForWidget = (element) => {
             return base
         case 'DashboardNoteWidget':
             return { ...base, initialNote: props.dashboard_note }
+        case 'MoodWidget':
+            return base
+        case 'AffirmationWidget':
+            return base
     }
     return base
 }

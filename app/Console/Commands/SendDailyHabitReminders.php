@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Notifications\DailyCheckInMissed;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SendDailyHabitReminders extends Command
 {
@@ -30,40 +31,48 @@ class SendDailyHabitReminders extends Command
         User::whereNotNull('email_verified_at')
             ->chunk(100, function ($users) use ($currentTime, $today, $affirmations) {
                 foreach ($users as $user) {
-                    $settings = $user->settings ?? [];
+                    try {
+                        $settings = $user->settings ?? [];
 
-                    // Skip if disabled
-                    if (empty($settings['email_reminders'])) continue;
+                        // Skip if user disabled reminders
+                        if (empty($settings['email_reminders'])) continue;
 
-                    // Check if it matches user's preferred reminder time
-                    $reminderTime = $settings['reminder_time'] ?? '08:00';
-                    if ($reminderTime !== $currentTime) continue;
+                        // Check if it matches user's preferred reminder time
+                        $reminderTime = $settings['reminder_time'] ?? '08:00';
+                        if ($reminderTime !== $currentTime) continue;
 
-                    $habits = $user->habits()
-                        ->where('status', 'active')
-                        ->with('category')
-                        ->orderBy('priority')
-                        ->get();
+                        $habits = $user->habits()
+                            ->where('status', 'active')
+                            ->with('category')
+                            ->orderBy('priority')
+                            ->get();
 
-                    if ($habits->isEmpty()) continue;
+                        if ($habits->isEmpty()) continue;
 
-                    // Send email reminder
-                    Mail::to($user->email)->send(
-                        new DailyHabitReminder($user, $habits)
-                    );
+                        // Check if user has completed ALL habits today
+                        $completedToday = $user->completions()
+                            ->whereDate('completed_at', $today)
+                            ->where('is_done', true)
+                            ->count();
 
-                    // Check if user has completed 0 habits today — send DailyCheckInMissed notification
-                    $doneToday = $user->completions()
-                        ->whereDate('completed_at', $today)
-                        ->where('is_done', true)
-                        ->count();
+                        if ($completedToday >= $habits->count()) continue; // All done, no alert needed
 
-                    if ($doneToday === 0) {
-                        $affirmation = $affirmations[array_rand($affirmations)];
-                        $user->notify(new DailyCheckInMissed($affirmation));
+                        // Send email reminder
+                        Mail::to($user->email)->send(
+                            new DailyHabitReminder($user, $habits)
+                        );
+
+                        // If 0 habits completed, also send the mobile/in-app notification
+                        if ($completedToday === 0) {
+                            $affirmation = $affirmations[array_rand($affirmations)];
+                            $user->notify(new DailyCheckInMissed($affirmation));
+                        }
+
+                        $this->info("Sent daily reminder to {$user->email}");
+                    } catch (\Exception $e) {
+                        \Log::error("Daily reminder failed for user {$user->id}: " . $e->getMessage());
+                        $this->error("Failed for user {$user->id}: " . $e->getMessage());
                     }
-
-                    $this->info("Sent daily reminder to {$user->email}");
                 }
             });
     }

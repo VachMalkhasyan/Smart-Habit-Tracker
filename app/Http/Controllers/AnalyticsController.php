@@ -15,7 +15,7 @@ class AnalyticsController extends Controller
         $today = Carbon::today();
 
         // Heatmap — last year of completions
-        $heatmap = $user->completions()
+        $heatmap = Completion::whereIn('habit_id', $user->habits()->pluck('id'))
             ->where('completed_at', '>=', $today->copy()->subYear())
             ->where('is_done', true)
             ->selectRaw('completed_at, COUNT(*) as count')
@@ -27,7 +27,7 @@ class AnalyticsController extends Controller
             ]);
 
         // Best day of week
-        $dayStats = $user->completions()
+        $dayStats = Completion::whereIn('habit_id', $user->habits()->pluck('id'))
             ->where('is_done', true)
             ->selectRaw('DAYOFWEEK(completed_at) as day, COUNT(*) as count')
             ->groupBy('day')
@@ -87,6 +87,8 @@ class AnalyticsController extends Controller
             'bestStreak'       => $bestStreak,
             'avgCompletionRate' => round($avgCompletionRate),
             'weekly_summary'    => $user->last_weekly_summary,
+            'average_mood'      => $user->weeklyMoodAverage(),
+            'mood_streak'       => $user->getMoodStreak(),
         ]);
     }
 }
