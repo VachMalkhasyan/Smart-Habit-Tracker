@@ -3,11 +3,14 @@ import { usePage }     from '@inertiajs/vue3'
 import { toast }       from 'vue-sonner'
 
 let initialized = false;
+const activeChannels = new Map()
+
 let globalHandlers = {
     onHabitCompleted:       new Set(),
     onXpAwarded:            new Set(),
     onFriendActivity:       new Set(),
     onNotificationReceived: new Set(),
+    onWeeklySummaryReady:   new Set(),
 }
 
 export function useRealtime() {
@@ -19,6 +22,13 @@ export function useRealtime() {
         onXpAwarded:            null,
         onFriendActivity:       null,
         onNotificationReceived: null,
+        onWeeklySummaryReady:   null,
+    }
+
+    if (userId && activeChannels.has(userId)) {
+        const existingChannel = activeChannels.get(userId)
+        // Global handlers are already hooked up to existingChannel.
+        // We just need to register component-specific handlers.
     }
 
     onMounted(() => {
@@ -34,8 +44,8 @@ export function useRealtime() {
         // Initialize Echo channel and listeners ONCE for the whole app
         if (!initialized) {
             initialized = true;
-            console.log(`[useRealtime] Connecting to private-user.${userId}`);
             const channel = window.Echo.private(`user.${userId}`)
+            activeChannels.set(userId, channel)
 
             channel.listen('.habit.completed', (e) => {
                 globalHandlers.onHabitCompleted.forEach(fn => fn(e))

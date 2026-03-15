@@ -15,21 +15,20 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useChartTheme } from '@/composables/useChartTheme'
 
 const props = defineProps({
     monthlyTrend: { type: Array, default: () => [] }
 })
 
-const isDark = computed(() =>
-    document.documentElement.classList.contains('dark')
-)
+const { chartTheme } = useChartTheme()
 
 const monthlyChartOptions = computed(() => ({
-    chart:       { toolbar: { show: false } },
+    ...chartTheme.value,
+    chart: { ...chartTheme.value.chart, toolbar: { show: false } },
     stroke:      { curve: 'smooth', width: 2 },
     fill:        { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
     dataLabels:  { enabled: false },
-    theme:       { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.monthlyTrend?.map(d => d.month) ?? [],
         labels:     { style: { colors: '#9ca3af' } },
@@ -37,9 +36,7 @@ const monthlyChartOptions = computed(() => ({
         axisTicks:  { show: false },
     },
     yaxis:  { labels: { style: { colors: '#9ca3af' }, formatter: (v) => Math.round(v) } },
-    grid:   { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1'],
-    tooltip: { theme: isDark.value ? 'dark' : 'light' },
 }))
 
 const monthlyChartSeries = computed(() => [{

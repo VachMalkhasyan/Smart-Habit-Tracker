@@ -191,6 +191,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
+import axios from 'axios'
 import draggable from 'vuedraggable'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { Button } from '@/components/ui/button'
@@ -252,16 +253,14 @@ const isFiltered = computed(() =>
 )
 
 // On drag end
-const onDragEnd = () => {
-    const ordered = draggableHabits.value.map((habit, index) => ({
-        id:    habit.id,
-        order: index + 1,
-    }))
-
-    router.post(route('habits.reorder'), { habits: ordered }, {
-        preserveScroll: true,
-        preserveState:  true,
-    })
+const onDragEnd = async () => {
+    try {
+        await axios.post('/habits/reorder', {
+            habits: draggableHabits.value.map(h => h.id)
+        })
+    } catch (e) {
+        console.error('Failed to reorder habits', e)
+    }
 }
 
 // Helpers

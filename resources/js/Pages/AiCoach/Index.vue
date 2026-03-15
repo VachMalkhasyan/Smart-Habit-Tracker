@@ -165,6 +165,13 @@ const sendMessage = async () => {
             created_at: new Date().toISOString()
         })
         
+        // Auto-name
+        if (data.conversation_title) {
+            activeConversation.value.title = data.conversation_title
+            const conv = conversations.value.find(c => c.id === activeConversation.value.id)
+            if (conv) conv.title = data.conversation_title
+        }
+        
         // Update token stat locally
         if (data.tokens_used && activeConversation.value) {
             activeConversation.value.tokens_used += data.tokens_used

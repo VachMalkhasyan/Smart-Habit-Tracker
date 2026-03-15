@@ -75,6 +75,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 import draggable from 'vuedraggable'
 import { Check, Flame, ListChecks, GripVertical } from 'lucide-vue-next'
 
@@ -90,15 +91,14 @@ watch(() => props.habits, (newHabits) => {
     localHabits.value = [...newHabits]
 }, { deep: true })
 
-const onDragEnd = () => {
-    const defaultPriorityValues = [1, 2, 3] // Use local indexes to shift priorities gracefully, or just rely on IDs array
-    
-    // We send back the exact array of ordered IDs
-    const orderedIds = localHabits.value.map(h => h.id)
-    
-    router.post(route('habits.reorder'), {
-        ordered_ids: orderedIds
-    }, { preserveScroll: true })
+const onDragEnd = async () => {
+    try {
+        await axios.post('/habits/reorder', {
+            habits: localHabits.value.map(h => h.id)
+        })
+    } catch (e) {
+        console.error('Failed to reorder habits', e)
+    }
 }
 
 const priorityClass = (p) => ({

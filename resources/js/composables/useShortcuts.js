@@ -13,12 +13,16 @@ export function useShortcuts(extras = {}) {
             settings:    's',
             search:      '/',
             help:        '?',
-            analytics:   'n',
+            analytics:   'a',
             friends:     'f',
             templates:   't',
             onboarding:  'o',
-            ai:          'i',
-            ai_assistant: 'a',
+            pomodoro:    'p',
+            mood:        'm',
+            ai_coach:    'i',
+            ai_widget:   'q',
+            focus_mode:  'z',
+            diary:       'j',
         }
     }
 
@@ -40,9 +44,9 @@ export function useShortcuts(extras = {}) {
             return
         }
 
-        if (key === shortcuts.ai_assistant) {
-            if (extras.onAiAssistant) {
-                extras.onAiAssistant()
+        if (key === shortcuts.ai_widget) {
+            if (extras.onAiWidget) {
+                extras.onAiWidget()
             } else {
                 window.dispatchEvent(new CustomEvent('toggle-ai-widget'))
             }
@@ -69,7 +73,9 @@ export function useShortcuts(extras = {}) {
             [shortcuts.friends]:    () => router.visit(route('friends.index')),
             [shortcuts.templates]:  () => router.visit(route('templates.index')),
             [shortcuts.onboarding]: () => router.visit(route('onboarding')),
-            [shortcuts.ai]:         () => router.visit(route('ai.index')),
+            [shortcuts.ai_coach]:   () => router.visit(route('ai.index')),
+            [shortcuts.mood]:       () => router.visit(route('mood.index')),
+            [shortcuts.pomodoro]:   () => router.visit(route('pomodoro')),
         }
 
         if (navigationMap[key]) {

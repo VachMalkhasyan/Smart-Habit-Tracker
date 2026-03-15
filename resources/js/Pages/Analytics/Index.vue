@@ -13,6 +13,31 @@
             />
         </div>
 
+        <!-- Mood Summary Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
+            <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-2xl p-4 flex items-center gap-4">
+                <div class="text-3xl">😄</div>
+                <div>
+                    <p class="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Weekly Mood</p>
+                    <p class="text-xl font-black text-emerald-900 dark:text-emerald-100">{{ average_mood }}/5 Avg</p>
+                </div>
+            </div>
+            <div class="bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900 rounded-2xl p-4 flex items-center gap-4">
+                <div class="text-3xl">🔥</div>
+                <div>
+                    <p class="text-xs font-bold text-orange-700 dark:text-orange-400 uppercase tracking-wider">Mood Streak</p>
+                    <p class="text-xl font-black text-orange-900 dark:text-orange-100">{{ mood_streak }} Days</p>
+                </div>
+            </div>
+            <div class="bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900 rounded-2xl p-4 flex items-center gap-4">
+                <div class="text-3xl">📈</div>
+                <div>
+                    <p class="text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">Trending</p>
+                    <p class="text-xl font-black text-indigo-900 dark:text-indigo-100">Positive</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Overview Stats -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
             <div v-for="stat in overviewStats" :key="stat.label"
@@ -196,6 +221,7 @@ import WeeklyAiSummaryCard from '@/Components/WeeklyAiSummaryCard.vue'
 import { Flame, CalendarCheck, Award, TrendingUp, Activity } from 'lucide-vue-next'
 import axios from 'axios'
 import { useRealtime } from '@/composables/useRealtime'
+import { useChartTheme } from '@/composables/useChartTheme'
 import dayjs from 'dayjs'
 
 const props = defineProps({
@@ -208,6 +234,8 @@ const props = defineProps({
     bestStreak:        Number,
     avgCompletionRate: Number,
     weekly_summary:    Object,
+    average_mood:      Number,
+    mood_streak:       Number,
 })
 
 const weeklySummary = ref(props.weekly_summary)
@@ -342,16 +370,14 @@ const maxDayCount = computed(() =>
 
 // ── Charts ──────────────────────────────────────────────
 
-const isDark = computed(() =>
-    document.documentElement.classList.contains('dark')
-)
+const { chartTheme } = useChartTheme()
 
 const monthlyChartOptions = computed(() => ({
-    chart:       { toolbar: { show: false } },
+    ...chartTheme.value,
+    chart:       { ...chartTheme.value.chart, toolbar: { show: false } },
     stroke:      { curve: 'smooth', width: 2 },
     fill:        { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
     dataLabels:  { enabled: false },
-    theme:       { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.monthlyTrend?.map(d => d.month) ?? [],
         labels:     { style: { colors: '#9ca3af' } },
@@ -359,9 +385,7 @@ const monthlyChartOptions = computed(() => ({
         axisTicks:  { show: false },
     },
     yaxis:  { labels: { style: { colors: '#9ca3af' } } },
-    grid:   { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1'],
-    tooltip: { theme: isDark.value ? 'dark' : 'light' },
 }))
 
 const monthlyChartSeries = [{
@@ -370,10 +394,10 @@ const monthlyChartSeries = [{
 }]
 
 const streakChartOptions = computed(() => ({
-    chart:      { toolbar: { show: false } },
+    ...chartTheme.value,
+    chart:      { ...chartTheme.value.chart, toolbar: { show: false } },
     plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
     dataLabels: { enabled: false },
-    theme:      { mode: isDark.value ? 'dark' : 'light' },
     xaxis: {
         categories: props.habitStats?.map(h => h.name.length > 12 ? h.name.substring(0, 12) + '…' : h.name) ?? [],
         labels:     { style: { colors: '#9ca3af', fontSize: '11px' } },
@@ -381,10 +405,8 @@ const streakChartOptions = computed(() => ({
         axisTicks:  { show: false },
     },
     yaxis:  { labels: { style: { colors: '#9ca3af' } } },
-    grid:   { borderColor: isDark.value ? '#374151' : '#f3f4f6', strokeDashArray: 4 },
     colors: ['#6366f1', '#e0e7ff'],
     legend: { labels: { colors: '#9ca3af' } },
-    tooltip: { theme: isDark.value ? 'dark' : 'light' },
 }))
 
 const streakChartSeries = [

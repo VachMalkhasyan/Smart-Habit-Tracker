@@ -94,12 +94,12 @@
 
                     <!-- Footer -->
                     <div class="px-5 py-3 border-t border-gray-50 dark:border-gray-800 flex items-center justify-between">
-                        <span class="text-xs text-gray-400 dark:text-gray-500">
-                            {{ template.deadline_value }} {{ template.deadline_unit }} duration
-                        </span>
-                        <span class="text-xs text-indigo-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                            Use template <ArrowRight class="w-3 h-3" />
-                        </span>
+                        <Button @click.stop="quickAddTemplate(template)" variant="outline" size="sm" class="gap-1 border-indigo-200 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50">
+                            Quick Add ⚡
+                        </Button>
+                        <Button @click.stop="selectTemplate(template)" size="sm" class="bg-indigo-600 hover:bg-indigo-700 text-white gap-1 z-10 relative">
+                            Customize <ArrowRight class="w-3 h-3" />
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -150,5 +150,11 @@ const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
 
 const selectTemplate = (template) => {
     router.visit(route('habits.create', { template: template.id }))
+}
+
+const quickAddTemplate = (template) => {
+    router.post(route('templates.quick-add', { template: template.id }), {}, {
+        preserveScroll: true,
+    })
 }
 </script>

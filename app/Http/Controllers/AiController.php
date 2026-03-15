@@ -81,8 +81,18 @@ class AiController extends Controller
 
         $responseContent = $aiService->chat($request->user(), $conversation, $request->message);
 
+        // After getting AI response, if conversation still has default title
+        if ($conversation->title === 'New Conversation') {
+            // Use first 6 words of user's message as title
+            $words = explode(' ', $request->message);
+            $title = implode(' ', array_slice($words, 0, 6));
+            $title = strlen($title) > 40 ? substr($title, 0, 40) . '...' : $title;
+            $conversation->update(['title' => ucfirst($title)]);
+        }
+
         return response()->json([
             'response' => $responseContent,
+            'conversation_title' => $conversation->fresh()->title,
         ]);
     }
 

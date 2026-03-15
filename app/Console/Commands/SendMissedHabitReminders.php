@@ -8,6 +8,7 @@ use App\Notifications\HabitStreakAtRisk;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\MissedHabitReminder;
+use Illuminate\Support\Facades\Log;
 
 class SendMissedHabitReminders extends Command
 {
@@ -21,41 +22,54 @@ class SendMissedHabitReminders extends Command
         User::whereNotNull('email_verified_at')
             ->chunk(100, function ($users) use ($yesterday) {
                 foreach ($users as $user) {
-                    $settings = $user->settings ?? [];
+                    try {
+                        $settings = $user->settings ?? [];
 
-                    // Skip if user disabled missed alerts
-                    if (empty($settings['missed_habit_alerts'])) continue;
+                        // Skip if user disabled missed alerts
+                        if (empty($settings['missed_habit_alerts'])) continue;
 
-                    $activeHabits = $user->habits()
-                        ->where('status', 'active')
-                        ->with('category')
-                        ->get();
+                        $activeHabits = $user->habits()
+                            ->where('status', 'active')
+                            ->with('category')
+                            ->get();
 
-                    if ($activeHabits->isEmpty()) continue;
+                        if ($activeHabits->isEmpty()) continue;
 
-                    // Find habits that were NOT completed yesterday
-                    $missedHabits = $activeHabits->filter(function ($habit) use ($yesterday) {
-                        return !$habit->completions()
+                        // Check yesterday's completions directly
+                        $completedYest = $user->completions()
                             ->whereDate('completed_at', $yesterday)
                             ->where('is_done', true)
-                            ->exists();
-                    });
+                            ->count();
 
-                    if ($missedHabits->isEmpty()) continue;
+                        if ($completedYest >= $activeHabits->count()) continue; // All done, no alert needed
 
-                    // Send email
-                    Mail::to($user->email)->send(
-                        new MissedHabitReminder($user, $missedHabits)
-                    );
+                        // Find habits that were NOT completed yesterday
+                        $missedHabits = $activeHabits->filter(function ($habit) use ($yesterday) {
+                            return !$habit->completions()
+                                ->whereDate('completed_at', $yesterday)
+                                ->where('is_done', true)
+                                ->exists();
+                        });
 
-                    // Send in-app streak-at-risk notifications for habits with active streaks
-                    foreach ($missedHabits as $habit) {
-                        if ($habit->current_streak > 0) {
-                            $user->notify(new HabitStreakAtRisk($habit));
+                        if ($missedHabits->isEmpty()) continue;
+
+                        // Send email
+                        Mail::to($user->email)->send(
+                            new MissedHabitReminder($user, $missedHabits)
+                        );
+
+                        // Send in-app streak-at-risk notifications for habits with active streaks
+                        foreach ($missedHabits as $habit) {
+                            if ($habit->current_streak > 0) {
+                                $user->notify(new HabitStreakAtRisk($habit));
+                            }
                         }
-                    }
 
-                    $this->info("Sent missed reminder to {$user->email} ({$missedHabits->count()} habits)");
+                        $this->info("Sent missed reminder to {$user->email} ({$missedHabits->count()} habits)");
+                    } catch (\Exception $e) {
+                        \Log::error("Streak at risk failed for user {$user->id}: " . $e->getMessage());
+                        $this->error("Failed for user {$user->id}: " . $e->getMessage());
+                    }
                 }
             });
     }

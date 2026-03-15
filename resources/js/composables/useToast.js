@@ -1,25 +1,30 @@
 import { toast } from 'vue-sonner'
 import { usePage, router } from '@inertiajs/vue3'
-import { onMounted, onUnmounted } from 'vue'
+
+let listenerRegistered = false;
+
+function showFlash(props) {
+    const flash = props?.flash
+    if (!flash) return
+    if (flash.success) toast.success(flash.success)
+    if (flash.error)   toast.error(flash.error)
+    if (flash.warning) toast.warning(flash.warning)
+    if (flash.info)    toast.info(flash.info)
+}
 
 export function useToast() {
     const page = usePage()
 
-    const showFlash = (props) => {
-        const flash = props?.flash
-        if (!flash) return
-        if (flash.success) toast.success(flash.success)
-        if (flash.error)   toast.error(flash.error)
-        if (flash.warning) toast.warning(flash.warning)
-        if (flash.info)    toast.info(flash.info)
+    if (!listenerRegistered) {
+        listenerRegistered = true;
+        router.on('finish', () => {
+            showFlash(page.props)
+        })
     }
 
-    // Fires after every Inertia navigation (including redirects)
-    const removeListener = router.on('finish', () => {
-        showFlash(page.props)
-    })
-
-    onUnmounted(() => removeListener())
+    // We don't want to register a listener for every component that calls useToast.
+    // However, if we must do it here, we should ensure only one listener exists globally.
+    // Handled globally instead of in component instance.
 
     return {
         success: (msg) => toast.success(msg),

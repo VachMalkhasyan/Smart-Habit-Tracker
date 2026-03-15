@@ -80,6 +80,25 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    Route::get('/extension/pomodoro', function (Request $request) {
+        $active = $request->user()
+            ->pomodoroSessions()
+            ->where('status', 'active')
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'has_active_session' => (bool) $active,
+            'session'            => $active ? [
+                'id'            => $active->id,
+                'work_minutes'  => $active->work_minutes,
+                'break_minutes' => $active->break_minutes,
+                'started_at'    => $active->started_at,
+                'habit'         => $active->habit?->name,
+            ] : null,
+        ]);
+    });
+
     Route::post('/extension/pomodoro', function (Request $request) {
         $user = $request->user();
         

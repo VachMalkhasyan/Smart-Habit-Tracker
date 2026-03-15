@@ -7,6 +7,8 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -97,9 +99,42 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(HabitCategory::class);
     }
 
-    public function completions(): HasMany
+    public function categories(): HasMany
     {
-        return $this->hasMany(Completion::class);
+        return $this->hasMany(Category::class);
+    }
+
+    public function moodLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MoodLog::class);
+    }
+
+    public function todaysMood(): ?MoodLog
+    {
+        return $this->moodLogs()
+            ->whereDate('logged_date', today())
+            ->first();
+    }
+
+    public function weeklyMoodAverage(): float
+    {
+        return round($this->moodLogs()->thisWeek()->avg('score') ?? 0, 1);
+    }
+
+    public function getMoodStreak(): int
+    {
+        $streak = 0;
+        $date   = today();
+        while ($this->moodLogs()->whereDate('logged_date', $date)->exists()) {
+            $streak++;
+            $date = $date->subDay();
+        }
+        return $streak;
+    }
+
+    public function completions(): HasManyThrough
+    {
+        return $this->hasManyThrough(Completion::class, Habit::class);
     }
 
     public function sentFriendRequests(): HasMany

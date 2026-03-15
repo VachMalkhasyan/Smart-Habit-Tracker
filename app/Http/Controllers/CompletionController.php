@@ -36,51 +36,72 @@ class CompletionController extends Controller
             'count' => !$completion->is_done ? $habit->repeat_count : 0,
         ]);
 
-        if ($completion->is_done) {
-            $xpResult = $this->awardXpIfNeeded($completion, $habit, $user, $wasFirstToday);
-            $message = 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP';
-        }
-        else {
-            $xpResult = $this->revokeXpIfNeeded($habit, $user);
-            $message = 'Habit unchecked. XP revoked.';
-        }
-        broadcast(new HabitCompleted(
-            $user,
-            $habit,
-            $completion->is_done,
-            $habit->fresh()->current_streak,
+        $alreadyAwarded = \App\Models\XpLog::where('user_id', $user->id)
+            ->where('source_type', 'habit')
+            ->where('source_id', $habit->id)
+            ->whereDate('created_at', today())
+            ->where('amount', '>', 0)
+            ->exists();
+
+        if ($wasDone !== $completion->is_done) {
+            if ($completion->is_done && !$alreadyAwarded) {
+                $xpResult = $this->awardXpIfNeeded($completion, $habit, $user, $wasFirstToday);
+                $message = 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP';
+            } elseif ($completion->is_done && $alreadyAwarded) {
+                $xpResult = null; // already awarded today, skip silently
+                $message = 'Habit checked.';
+            } else {
+                $xpResult = $this->revokeXpIfNeeded($habit, $user);
+                $message = 'Habit unchecked. XP revoked.';
+            }
+
+            broadcast(new HabitCompleted(
+                $user,
+                $habit,
+                $completion->is_done,
+                $habit->fresh()->current_streak,
             ))->toOthers();
 
-        if ($completion->is_done) {
-            if ($xpResult && isset($xpResult['xp_awarded'])) {
-                broadcast(new XpAwarded(
-                    $user->fresh(),
-                    $xpResult['xp_awarded'],
-                    "Completed: {$habit->name}",
-                    $xpResult['leveled_up'] ?? false,
-                    $xpResult['new_level'] ?? $user->level,
+            if ($completion->is_done) {
+                if ($xpResult && isset($xpResult['xp_awarded'])) {
+                    broadcast(new XpAwarded(
+                        $user->fresh(),
+                        $xpResult['xp_awarded'],
+                        "Completed: {$habit->name}",
+                        $xpResult['leveled_up'] ?? false,
+                        $xpResult['new_level'] ?? $user->level,
                     ));
-            }
-        }
-        else {
-            if ($xpResult && isset($xpResult['xp_revoked']) && $xpResult['xp_revoked'] > 0) {
-                broadcast(new XpAwarded(
-                    $user->fresh(),
-                    -$xpResult['xp_revoked'],
-                    "Unchecked: {$habit->name}",
-                    false,
-                    $user->fresh()->level,
+                }
+            } else {
+                if ($xpResult && isset($xpResult['xp_revoked']) && $xpResult['xp_revoked'] > 0) {
+                    broadcast(new XpAwarded(
+                        $user->fresh(),
+                        -$xpResult['xp_revoked'],
+                        "Unchecked: {$habit->name}",
+                        false,
+                        $user->fresh()->level,
                     ));
+                }
             }
-        }
 
-        if ($completion->is_done) {
-            broadcast(new FriendActivityUpdated($user, $habit, true));
+            if ($completion->is_done) {
+                broadcast(new FriendActivityUpdated($user, $habit, true));
+            }
+            
+            // Clear weekly summary cache at end of each day
+            // If we've made completion toggle changes, check if summary is stale
+            if ($user->last_weekly_summary_date?->isToday()) {
+                // Keep today's summary but mark it as stale after 6 hours
+                $summaryAge = now()->diffInHours($user->updated_at);
+                if ($summaryAge > 6) {
+                    $user->update(['last_weekly_summary_date' => null]);
+                }
+            }
         }
 
         return back()->with([
-            'success' => $message,
-            'xp_result' => $xpResult,
+            'success' => $message ?? 'State toggled.',
+            'xp_result' => $xpResult ?? null,
         ]);
     }
 
@@ -104,12 +125,25 @@ class CompletionController extends Controller
                 ->where('habit_id', '!=', $habit->id)
                 ->exists();
 
-            $xpResult = $this->awardXpIfNeeded($completion, $habit, $request->user(), $wasFirstToday);
+            $alreadyAwardedCount = \App\Models\XpLog::where('user_id', $request->user()->id)
+                ->where('source_type', 'habit')
+                ->where('source_id', $habit->id)
+                ->whereDate('created_at', today())
+                ->where('amount', '>', 0)
+                ->exists();
 
-            return back()->with([
-                'success' => 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP',
-                'xp_result' => $xpResult,
-            ]);
+            if (!$alreadyAwardedCount) {
+                $xpResult = $this->awardXpIfNeeded($completion, $habit, $request->user(), $wasFirstToday);
+
+                return back()->with([
+                    'success' => 'Habit completed! +' . XpService::XP_COMPLETE_HABIT . ' XP',
+                    'xp_result' => $xpResult,
+                ]);
+            } else {
+                return back()->with([
+                    'success' => 'Habit marked fully done.',
+                ]);
+            }
         }
 
         $this->updateStreak($habit);

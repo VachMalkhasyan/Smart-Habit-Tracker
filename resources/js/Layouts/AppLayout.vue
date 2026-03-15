@@ -8,7 +8,7 @@
         ]">
             <!-- Logo -->
             <div class="flex items-center justify-between px-4 py-5 border-b border-gray-200 dark:border-gray-700">
-                <span v-if="!collapsed" class="text-xl font-bold text-indigo-600">HabitFlow</span>
+                <span v-if="!collapsed" class="text-xl font-bold text-indigo-600">GrowthZone</span>
                 <button @click="collapsed = !collapsed"
                         class="p-1.5 rounded-lg hover:bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500">
                     <ChevronLeft v-if="!collapsed" class="w-5 h-5" />
@@ -92,8 +92,16 @@
                     <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ title }}</h1>
                     <p v-if="subtitle" class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{{ subtitle }}</p>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-3">
                     <slot name="header-actions" />
+                    <!-- Show mini timer in navbar when running but not on pomodoro page -->
+                    <div v-if="pomodoro.isRunning && !isOnPomodoroPage"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 shadow-sm
+                               text-white text-sm rounded-lg cursor-pointer transition-transform hover:scale-105"
+                        @click="router.visit('/pomodoro')">
+                        <span class="animate-pulse">🍅</span>
+                        <span class="font-mono font-bold tabular-nums">{{ pomodoro.formattedTime }}</span>
+                    </div>
                     <NotificationBell
                         ref="notificationBellRef"
                         :unreadCount="unreadCount"
@@ -139,7 +147,8 @@ import {
     LayoutTemplate,
     Users,
     Timer,
-    Bot
+    Bot,
+    Smile
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -152,6 +161,7 @@ import XpBar from "@/Components/XpBar.vue";
 import { useRealtime } from '@/composables/useRealtime'
 import NotificationBell from '@/Components/NotificationBell.vue'
 import AiChatWidget from '@/Components/AiChatWidget.vue'
+import { usePomodoroStore } from '@/stores/pomodoroStore'
 
 const props = defineProps({
     title: String,
@@ -164,6 +174,9 @@ const searchOpen            = ref(false)
 const shortcutsOpen         = ref(false)
 const notificationBellRef   = ref(null)
 
+const pomodoro              = usePomodoroStore()
+const isOnPomodoroPage      = computed(() => page.url.startsWith('/pomodoro'))
+
 // Reactive unread count — initialized from Inertia shared props
 const unreadCount = ref(page.props.unread_notifications_count ?? 0)
 
@@ -173,6 +186,7 @@ const toasterTheme = computed(() => {
 })
 const navItems = [
     { label: 'Dashboard',   href: route('dashboard'),   icon: LayoutDashboard },
+    { label: 'Mood',        href: route('mood.index'),  icon: Smile },
     { label: 'My Habits',   href: route('habits.index'), icon: ListChecks },
     { label: 'New Habit',   href: route('habits.create'), icon: PlusCircle },
     { label: 'Templates',  href: route('templates.index'),  icon: LayoutTemplate },
@@ -210,7 +224,7 @@ const { on } = useRealtime()
 // Make page.props the single source of truth so Inertia navigations and Echo events both update the same object
 on('onXpAwarded', (e) => {
     if (e.xp_progress) {
-        // Mutating Inertia page props directly is the recommended way to handle 
+        // Mutating Inertia page props directly is the recommended way to handle
         // global state updates in Inertia Vue3 so all components see it
         page.props.xp_progress = { ...page.props.xp_progress, ...e.xp_progress }
     }

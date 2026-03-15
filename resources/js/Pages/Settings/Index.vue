@@ -32,7 +32,11 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Daily Reminder Time</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500">When to send your morning reminder</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">
+                                    You'll receive your daily habit reminder at
+                                    <strong>{{ formatTime(form.reminder_time) }}</strong>
+                                    every day
+                                </p>
                             </div>
                             <input v-model="form.reminder_time" type="time"
                                    class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600" />
@@ -41,17 +45,17 @@
                         <div v-if="form.weekly_summary" class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Weekly Summary Day</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500">Which day to receive your weekly report</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500">
+                                    Your weekly AI summary will arrive every
+                                    <strong>{{ capitalize(form.weekly_summary_day) }}</strong>
+                                    at 9:00 AM
+                                </p>
                             </div>
                             <select v-model="form.weekly_summary_day"
                                     class="text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:focus:ring-indigo-600">
-                                <option value="monday">Monday</option>
-                                <option value="tuesday">Tuesday</option>
-                                <option value="wednesday">Wednesday</option>
-                                <option value="thursday">Thursday</option>
-                                <option value="friday">Friday</option>
-                                <option value="saturday">Saturday</option>
-                                <option value="sunday">Sunday</option>
+                                <option v-for="day in days" :key="day.value" :value="day.value">
+                                    {{ day.label }}
+                                </option>
                             </select>
                         </div>
                     </div>
@@ -365,26 +369,36 @@ const defaultShortcuts = {
     settings:    's',
     search:      '/',
     help:        '?',
-    analytics:   'n',
+    analytics:   'a',
     friends:     'f',
     templates:   't',
-    ai:          'i',
-    ai_assistant: 'a',
+    onboarding:  'o',
+    pomodoro:    'p',
+    mood:        'm',
+    ai_coach:    'i',
+    ai_widget:   'q',
+    focus_mode:  'z',
+    diary:       'j',
 }
 
 const shortcutList = [
     { key: 'dashboard',  label: 'Dashboard',      description: 'Go to dashboard' },
-    { key: 'habits',     label: 'My Habits',       description: 'Go to habits list' },
-    { key: 'create',     label: 'Create Habit',    description: 'Open create habit form' },
-    { key: 'analytics',  label: 'Analytics',       description: 'Go to analytics page' },
-    { key: 'friends',    label: 'Friends',         description: 'Go to friends page' },
-    { key: 'templates',  label: 'Templates',       description: 'Go to templates page' },
-    { key: 'ai',         label: 'AI Coach',        description: 'Open your AI Coach' },
-    { key: 'ai_assistant', label: 'AI Mini-Chat',  description: 'Toggle floating AI assistant' },
-    { key: 'categories', label: 'Categories',      description: 'Go to categories' },
-    { key: 'settings',   label: 'Settings',        description: 'Go to settings' },
-    { key: 'search',     label: 'Focus Search',    description: 'Open global search' },
-    { key: 'help',       label: 'Show Shortcuts',  description: 'Show keyboard shortcuts help' },
+    { key: 'habits',     label: 'My Habits',      description: 'Go to habits list' },
+    { key: 'create',     label: 'Create Habit',   description: 'Open create habit form' },
+    { key: 'analytics',  label: 'Analytics',      description: 'Go to analytics page' },
+    { key: 'friends',    label: 'Friends',        description: 'Go to friends page' },
+    { key: 'templates',  label: 'Templates',      description: 'Go to templates page' },
+    { key: 'pomodoro',   label: 'Pomodoro',       description: 'Open Pomodoro timer' },
+    { key: 'mood',       label: 'Mood Check-in',  description: 'Open daily mood check-in' },
+    { key: 'categories', label: 'Categories',     description: 'Go to categories' },
+    { key: 'ai_coach',   label: 'AI Coach',       description: 'Open your AI Coach' },
+    { key: 'ai_widget',  label: 'AI Mini-Chat',   description: 'Toggle floating AI assistant' },
+    { key: 'settings',   label: 'Settings',       description: 'Go to settings' },
+    { key: 'search',     label: 'Focus Search',   description: 'Open global search' },
+    { key: 'help',       label: 'Show Shortcuts', description: 'Show keyboard shortcuts help' },
+    { key: 'onboarding', label: 'Restart Setup',  description: 'Restart onboarding wizard' },
+    { key: 'focus_mode', label: 'Focus Mode',     description: 'Coming soon...' },
+    { key: 'diary',      label: 'Journal/Diary',  description: 'Coming soon...' },
 ]
 const captureKey = (event, action) => {
     const key = event.key.toLowerCase()
@@ -464,6 +478,30 @@ const weekDays = [
     { value: 'sunday',  label: 'Sunday' },
     { value: 'saturday', label: 'Saturday' },
 ]
+
+// Day options for reminders
+const days = [
+    { value: 'monday',    label: 'Monday'    },
+    { value: 'tuesday',   label: 'Tuesday'   },
+    { value: 'wednesday', label: 'Wednesday' },
+    { value: 'thursday',  label: 'Thursday'  },
+    { value: 'friday',    label: 'Friday'    },
+    { value: 'saturday',  label: 'Saturday'  },
+    { value: 'sunday',    label: 'Sunday'    },
+]
+
+const formatTime = (time) => {
+    if (!time) return '9:00 AM'
+    const [h, m]  = time.split(':')
+    const hour    = parseInt(h)
+    const suffix  = hour >= 12 ? 'PM' : 'AM'
+    const display = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour)
+    return `${display}:${m} ${suffix}`
+}
+
+const capitalize = (str) => str
+    ? str.charAt(0).toUpperCase() + str.slice(1)
+    : ''
 
 // Priorities
 const priorities = [

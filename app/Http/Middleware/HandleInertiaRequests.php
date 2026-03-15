@@ -55,7 +55,8 @@ class HandleInertiaRequests extends Middleware
             'unread_notifications_count' => $request->user()
                 ?->unreadNotifications()
                 ->count() ?? 0,
-
+            'today_mood'        => $request->user()?->todaysMood(),
+            'daily_affirmation' => $request->user()?->daily_affirmation,
         ]);
     }
 }
