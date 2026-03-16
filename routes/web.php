@@ -16,6 +16,10 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TemplateController;
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\MoodController;
+use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\JobInterviewController;
+use App\Http\Controllers\JobContactController;
+use App\Http\Controllers\CvController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -164,5 +168,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/conversations/{conversation}/chat', [AiController::class, 'chat'])->name('ai.conversations.chat');
         Route::delete('/conversations/{conversation}', [AiController::class, 'destroy'])->name('ai.conversations.destroy');
     });
-});
 
+    // Job Tracking
+    Route::post('/jobs/reorder',                           [JobApplicationController::class, 'reorder'])->name('jobs.reorder');
+    Route::get('/jobs/contacts',                           [JobContactController::class, 'index'])->name('jobs.contacts.index');
+    Route::post('/jobs/contacts',                          [JobContactController::class, 'store'])->name('jobs.contacts.store');
+    Route::patch('/jobs/contacts/{jobContact}',            [JobContactController::class, 'update'])->name('jobs.contacts.update');
+    Route::delete('/jobs/contacts/{jobContact}',           [JobContactController::class, 'destroy'])->name('jobs.contacts.destroy');
+
+    // CV Management (MUST come before /jobs/{jobApplication})
+    Route::get('/jobs/cv',                                 [CvController::class, 'index'])->name('cv.index');
+    Route::post('/jobs/cv/upload',                         [CvController::class, 'upload'])->name('cv.upload');
+    Route::post('/jobs/cv/text',                           [CvController::class, 'storeText'])->name('cv.store-text');
+    Route::post('/jobs/cv/{userCv}/activate',              [CvController::class, 'setActive'])->name('cv.activate');
+    Route::post('/jobs/cv/{userCv}/improve',               [CvController::class, 'improve'])->name('cv.improve');
+    Route::delete('/jobs/cv/{userCv}',                     [CvController::class, 'destroy'])->name('cv.destroy');
+
+    Route::get('/jobs',                                    [JobApplicationController::class, 'index'])->name('jobs.index');
+    Route::post('/jobs',                                   [JobApplicationController::class, 'store'])->name('jobs.store');
+    Route::get('/jobs/{jobApplication}',                   [JobApplicationController::class, 'show'])->name('jobs.show');
+    Route::patch('/jobs/{jobApplication}',                 [JobApplicationController::class, 'update'])->name('jobs.update');
+    Route::delete('/jobs/{jobApplication}',                [JobApplicationController::class, 'destroy'])->name('jobs.destroy');
+
+    // AI endpoints for Jobs
+    Route::post('/jobs/{jobApplication}/cover-letter',     [JobApplicationController::class, 'generateCoverLetter'])->name('jobs.cover-letter');
+    Route::post('/jobs/{jobApplication}/research',         [JobApplicationController::class, 'companyResearch'])->name('jobs.research');
+    Route::post('/jobs/{jobApplication}/ats-score',        [CvController::class, 'scoreJob'])->name('cv.score-job');
+
+    // Job Interviews
+    Route::post('/jobs/{jobApplication}/interviews',       [JobInterviewController::class, 'store'])->name('jobs.interviews.store');
+    Route::patch('/interviews/{jobInterview}',             [JobInterviewController::class, 'update'])->name('jobs.interviews.update');
+    Route::post('/interviews/{jobInterview}/prep',         [JobInterviewController::class, 'generatePrep'])->name('jobs.interviews.prep');
+    Route::delete('/interviews/{jobInterview}',            [JobInterviewController::class, 'destroy'])->name('jobs.interviews.destroy');
+});

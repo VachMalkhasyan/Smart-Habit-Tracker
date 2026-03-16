@@ -45,6 +45,7 @@
                 ✅ Habits
                 <span id="notif-badge" class="notif-tab-badge hidden">0</span>
             </button>
+            <button class="tab" data-tab="jobs">💼 Jobs</button>
         </div>
 
         <!-- Timer tab -->
@@ -52,6 +53,9 @@
             <div class="timer-display">
                 <div id="timer-time" class="timer-time">25:00</div>
                 <div id="timer-mode" class="timer-mode">Focus time</div>
+            </div>
+
+            <div id="sync-banner" class="hidden" style="font-size:11px; color:#4f46e5; text-align:center; padding:4px; margin-bottom:8px; background:#eef2ff; border-radius:6px;">
             </div>
 
             <div class="timer-controls">
@@ -102,6 +106,28 @@
                 </div>
                 <div id="notif-list" style="display:flex; flex-direction:column; gap:6px;"></div>
             </div>
+        </div>
+
+        <!-- Jobs tab -->
+        <div id="tab-jobs" class="tab-content hidden">
+            <div id="jobs-loading" class="muted text-center">Loading...</div>
+
+            <!-- Stats row -->
+            <div id="jobs-stats" class="hidden">
+                <div class="stats-row">
+                    <span id="jobs-applied">0 Applied</span>
+                    <span id="jobs-interviewing">0 Interviews</span>
+                    <span id="jobs-offers">0 Offers</span>
+                </div>
+            </div>
+
+            <!-- Upcoming interviews -->
+            <div id="upcoming-interviews"></div>
+
+            <a id="open-jobs" href="http://localhost:8000/jobs"
+               target="_blank" class="btn btn-outline w-full mt-2">
+                Open Job Tracker →
+            </a>
         </div>
     </div>
 

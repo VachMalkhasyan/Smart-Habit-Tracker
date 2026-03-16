@@ -42,14 +42,16 @@ const skipHabit = (id) => {
 }
 
 const addHabit = (suggestion) => {
-    const params = new URLSearchParams()
-    if (suggestion.name) params.append('name', suggestion.name)
-    if (suggestion.category) params.append('category', suggestion.category)
-    if (suggestion.goal) params.append('goal', suggestion.goal)
-    if (suggestion.goal_unit) params.append('goal_unit', String(suggestion.goal_unit))
-    if (suggestion.priority) params.append('priority', suggestion.priority)
-
-    router.visit(route('habits.create') + '?' + params.toString())
+    router.post(route('habits.store'), {
+        name:              suggestion.name,
+        new_category_name: suggestion.category,
+        goal:              suggestion.goal,
+        goal_unit:         suggestion.goal_unit  || 'days',
+        repeat_count:      suggestion.repeat_count || 1,
+        priority:          suggestion.priority || 2,
+        start_date:        new Date().toISOString().split('T')[0],
+        status:            'active'
+    })
 }
 </script>
 

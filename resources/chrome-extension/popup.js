@@ -82,20 +82,31 @@ async function syncWithApp() {
         const res  = await apiGet('/api/extension/pomodoro')
         const data = await res.json()
 
-        if (data.has_active_session && !timerRunning) {
-            // App has active session — calculate remaining time
-            const startedAt  = new Date(data.session.started_at)
-            const elapsed    = Math.floor((Date.now() - startedAt) / 1000)
-            const totalSecs  = data.session.work_minutes * 60
-            const remaining  = Math.max(0, totalSecs - elapsed)
+        if (data.has_active_session && data.session) {
+            const session = data.session
 
-            workMin      = data.session.work_minutes
-            breakMin     = data.session.break_minutes
-            timerSeconds = remaining
+            workMin      = session.work_minutes
+            breakMin     = session.break_minutes
+            timerSeconds = session.remaining_seconds
             currentMode  = 'work'
 
+            chrome.storage.local.set({
+                workMin, breakMin, timerSeconds, currentMode
+            })
+
             updateTimerDisplay()
-            // Assume habit is handled/displayed if wanted
+            
+            // Auto-start extension timer if an active session is found
+            if (!timerRunning) {
+                startLocalInterval(false)
+            }
+
+            const banner = document.getElementById('sync-banner')
+            if (banner) {
+                banner.textContent = `⚡ Synced with app${session.habit ? ' — ' + session.habit : ''}`
+                banner.classList.remove('hidden')
+                setTimeout(() => banner.classList.add('hidden'), 3000)
+            }
         }
     } catch (e) {
         console.log('Sync failed', e)
@@ -403,7 +414,7 @@ function sessionDone() {
 
 function updateTimerDisplay() {
     const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0')
-    const s = (timerSeconds % 60).toString().padStart(2, '0')
+    const s = Math.floor(timerSeconds % 60).toString().padStart(2, '0')
     timerTime.textContent = `${m}:${s}`
     timerMode.textContent = currentMode === 'work' ? 'Focus time 🍅' : 'Break time ☕'
 }
@@ -465,3 +476,49 @@ function setupTabs() {
         })
     })
 }
+
+async function loadJobs() {
+    document.getElementById('jobs-loading').classList.remove('hidden')
+    try {
+        const res  = await apiGet('/api/extension/jobs')
+        const data = await res.json()
+
+        document.getElementById('jobs-loading').classList.add('hidden')
+        document.getElementById('jobs-stats').classList.remove('hidden')
+
+        document.getElementById('jobs-applied').textContent =
+            `${data.stats.applied} Applied`
+        document.getElementById('jobs-interviewing').textContent =
+            `${data.stats.interviewing} Interviews`
+        document.getElementById('jobs-offers').textContent =
+            `${data.stats.offers} Offers`
+
+        const container = document.getElementById('upcoming-interviews')
+        if (data.upcoming_interviews.length === 0) {
+            container.innerHTML =
+                '<p class="muted text-center" style="padding:8px 0">No upcoming interviews</p>'
+        } else {
+            container.innerHTML = data.upcoming_interviews.map(i => `
+                <div class="habit-item">
+                    <div class="habit-check done">🗓️</div>
+                    <div style="flex:1">
+                        <p class="habit-name">${i.type} — ${i.company}</p>
+                        <p class="muted">${new Date(i.scheduled_at)
+                            .toLocaleDateString('en-US', {
+                                weekday: 'short', month: 'short',
+                                day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}</p>
+                    </div>
+                    ${i.has_prep ? '<span style="color:#4f46e5;font-size:11px">AI Ready ✓</span>' : ''}
+                </div>
+            `).join('')
+        }
+    } catch (e) {
+        document.getElementById('jobs-loading').textContent = 'Failed to load jobs'
+    }
+}
+
+// Call loadJobs when jobs tab is clicked
+document.querySelector('[data-tab="jobs"]')
+    .addEventListener('click', loadJobs)
+

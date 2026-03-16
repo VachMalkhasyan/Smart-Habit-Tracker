@@ -3,101 +3,114 @@
                :subtitle="isEditing ? 'Update your habit details' : 'Build a new habit to track'">
 
         <div class="max-w-2xl mx-auto">
-            <div v-if="template"
-                 class="bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-4 flex items-center gap-3 mb-2">
-                <div class="w-10 h-10 bg-white dark:bg-indigo-900 rounded-xl flex items-center justify-center text-xl shrink-0">
-                    {{ template.icon }}
-                </div>
-                <div>
-                    <p class="text-sm font-semibold text-indigo-700 dark:text-indigo-300">
-                        Using template: {{ template.name }}
-                    </p>
-                    <p class="text-xs text-indigo-500 dark:text-indigo-400">
-                        Fields pre-filled — customize as needed
+            <!-- Step -1: Choose path — shown before wizard starts -->
+            <div v-if="currentStep === -1 && !isEditing" class="space-y-6 py-12">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-black text-gray-900 dark:text-gray-100">
+                        Add a new habit
+                    </h2>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">
+                        Start from scratch or pick from our curated templates
                     </p>
                 </div>
+
+                <!-- Two paths -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Start from scratch -->
+                    <button @click="currentStep = 0"
+                        class="p-8 rounded-3xl border-2 border-gray-100 dark:border-gray-800
+                               hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-gray-900 
+                               text-left transition-all group hover:shadow-xl hover:shadow-indigo-500/10">
+                        <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">✏️</div>
+                        <h3 class="font-black text-xl text-gray-900 dark:text-gray-100 mb-2">
+                            Start from scratch
+                        </h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                            Create a fully custom habit with your own goals, schedule, and priority.
+                        </p>
+                    </button>
+
+                    <!-- Browse templates -->
+                    <button @click="showTemplates = true"
+                        class="p-8 rounded-3xl border-2 border-gray-100 dark:border-gray-800
+                               hover:border-indigo-400 dark:hover:border-indigo-600 bg-white dark:bg-gray-900 
+                               text-left transition-all group hover:shadow-xl hover:shadow-indigo-500/10">
+                        <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">📚</div>
+                        <h3 class="font-black text-xl text-gray-900 dark:text-gray-100 mb-2">
+                            Browse templates
+                        </h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                            Pick from 200+ pre-built habits across health, work, and personal growth.
+                        </p>
+                    </button>
+                </div>
+
+                <!-- AI suggestion shortcut -->
+                <div class="text-center mt-12">
+                    <button @click="goToAiSuggestions"
+                        class="text-sm text-indigo-500 hover:text-indigo-700 font-bold flex
+                               items-center justify-center gap-2 group transition-all">
+                        <span class="group-hover:rotate-12 transition-transform">✨</span>
+                        Let AI suggest habits based on my profile
+                    </button>
+                </div>
             </div>
-            <div v-if="!template" class="flex justify-center mb-2">
-                <button type="button" @click="templateModal = true"
-                        class="flex items-center gap-2 text-sm text-indigo-500 hover:text-indigo-600 border border-dashed border-indigo-300 dark:border-indigo-700 px-4 py-2 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all">
-                    <LayoutTemplate class="w-4 h-4" />
-                    Start from a template
-                </button>
-            </div>
-            <!-- Template Modal — Full-Page Overlay -->
-            <Teleport to="body">
-                <Transition name="overlay-fade">
-                    <div v-if="templateModal"
-                        class="fixed inset-0 z-50 flex items-stretch justify-end"
-                        @click.self="templateModal = false"
-                    >
-                        <!-- Backdrop -->
-                        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="templateModal = false"></div>
 
-                        <!-- Slide-in Panel -->
-                        <Transition name="panel-slide" appear>
-                            <div v-if="templateModal"
-                                class="relative z-10 w-full max-w-xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col overflow-hidden"
-                            >
-                                <!-- Panel Header -->
-                                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                                    <div>
-                                        <h2 class="text-lg font-bold text-gray-800 dark:text-white">Choose a Template</h2>
-                                        <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Pick one to pre-fill the wizard</p>
-                                    </div>
-                                    <button @click="templateModal = false"
-                                        class="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                    >✕</button>
-                                </div>
-
-                                <!-- Category tabs -->
-                                <div class="flex gap-2 flex-wrap px-6 py-3 border-b border-gray-100 dark:border-gray-800 shrink-0">
-                                    <button @click="modalCategory = null"
-                                        :class="['px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                                            modalCategory === null
-                                                ? 'bg-indigo-600 text-white shadow-sm'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700']">
-                                        All
-                                    </button>
-                                    <button v-for="cat in templateCategories" :key="cat"
-                                        @click="modalCategory = cat"
-                                        :class="['px-3 py-1.5 rounded-full text-xs font-semibold transition-all capitalize',
-                                            modalCategory === cat
-                                                ? 'bg-indigo-600 text-white shadow-sm'
-                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700']">
-                                        {{ cat }}
-                                    </button>
-                                </div>
-
-                                <!-- Templates List — Scrollable -->
-                                <div class="flex-1 overflow-y-auto px-6 py-4">
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <button v-for="t in filteredModalTemplates" :key="t.id" type="button"
-                                            @click="applyTemplate(t)"
-                                            class="flex items-start gap-3 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/60 dark:hover:bg-indigo-950/40 transition-all text-left group"
-                                        >
-                                            <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-xl shrink-0">
-                                                {{ t.icon }}
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <p class="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">{{ t.name }}</p>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5 line-clamp-2">{{ t.description }}</p>
-                                                <p class="text-xs text-indigo-500 dark:text-indigo-400 mt-1.5 font-medium">{{ t.goal }} {{ t.goal_unit }} · {{ t.repeat_count }}×/day</p>
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    <!-- Empty state -->
-                                    <div v-if="filteredModalTemplates.length === 0" class="text-center py-16 text-gray-400">
-                                        <p class="text-4xl mb-3">🔍</p>
-                                        <p class="text-sm">No templates in this category</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </Transition>
+            <!-- Templates panel (shown inline) -->
+            <div v-if="showTemplates && currentStep === -1" class="space-y-6 py-6 animate-in slide-in-from-right duration-300">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <button @click="showTemplates = false"
+                            class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-all">
+                            <ArrowLeft class="w-5 h-5" />
+                        </button>
+                        <h3 class="text-xl font-black text-gray-900 dark:text-gray-100">
+                            Choose a Template
+                        </h3>
                     </div>
-                </Transition>
-            </Teleport>
+                </div>
+
+                <!-- Category filter pills -->
+                <div class="flex gap-2 flex-wrap pb-2 mb-2">
+                    <button @click="selectedCategory = 'All'"
+                        :class="['px-4 py-2 rounded-xl text-xs font-bold transition-all',
+                                 selectedCategory === 'All'
+                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                                     : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700']">
+                        All
+                    </button>
+                    <button v-for="cat in templateCategories" :key="cat"
+                        @click="selectedCategory = cat"
+                        :class="['px-4 py-2 rounded-xl text-xs font-bold transition-all capitalize',
+                                 selectedCategory === cat
+                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+                                     : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700']">
+                        {{ cat }}
+                    </button>
+                </div>
+
+                <!-- Template cards grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+                    <div v-for="template in filteredTemplates" :key="template.id"
+                        @click="applyTemplate(template)"
+                        class="p-5 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900
+                               hover:border-indigo-400 hover:shadow-lg transition-all cursor-pointer group flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/40 flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
+                            {{ template.icon }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 transition-colors truncate">
+                                {{ template.name }}
+                            </p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                                {{ template.goal }} {{ template.goal_unit }} • {{ template.category }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
             <form v-if="isEditing" @submit.prevent="submit" class="space-y-6">
 
                 <!-- Basic Info Card -->
@@ -292,7 +305,7 @@
             </form>
 
             <!-- Wizard (Create Mode only) -->
-            <div v-else class="max-w-2xl mx-auto pb-8">
+            <div v-else-if="currentStep >= 0" class="max-w-2xl mx-auto pb-8 animate-in fade-in duration-500">
 
                 <!-- Step Progress Bar -->
                 <div class="flex items-center mb-8 px-2">
@@ -587,6 +600,11 @@
                     <Button v-if="currentStep > 0" type="button" variant="outline" @click="prevStep" class="gap-2 flex-1 sm:flex-none">
                         <ArrowLeft class="w-4 h-4" /> Back
                     </Button>
+                    <div v-else-if="currentStep === 0" class="flex-1 sm:flex-none">
+                        <Button type="button" variant="outline" @click="currentStep = -1" class="gap-2 w-full">
+                            <ArrowLeft class="w-4 h-4" /> Back
+                        </Button>
+                    </div>
                     <Link v-else :href="route('habits.index')" class="flex-1 sm:flex-none">
                         <Button type="button" variant="outline" class="gap-2 w-full">
                             <ArrowLeft class="w-4 h-4" /> Cancel
@@ -624,8 +642,8 @@ import { LayoutTemplate, Clock, AlertCircle } from 'lucide-vue-next'
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges'
 import UnsavedChangesModal from '@/Components/UnsavedChangesModal.vue'
 
-const templateModal    = ref(false)
-const modalCategory    = ref(null)
+const showTemplates    = ref(false)
+const selectedCategory = ref('All')
 
 const wizardSteps = [
     { id: 1, title: 'Basics', desc: 'Name & Category' },
@@ -633,18 +651,14 @@ const wizardSteps = [
     { id: 3, title: 'Reminders', desc: 'Priority & Time' }
 ]
 
+const goToAiSuggestions = () => {
+    router.visit(route('templates.index') + '?tab=ai')
+}
+
 
 
 const applyTemplate = (t) => {
-    form.name           = t.name
-    form.description    = t.description ?? ''
-    form.goal           = t.goal
-    form.goal_unit      = t.goal_unit
-    form.repeat_count   = t.repeat_count
-    form.deadline_value = t.deadline_value
-    form.deadline_unit  = t.deadline_unit
-    form.priority       = t.priority
-    templateModal.value = false
+    router.post(route('templates.quick-add', { template: t.id }))
 }
 
 const props = defineProps({
@@ -664,9 +678,9 @@ const templateCategories = computed(() =>
     Object.keys(props.templateGroups ?? {})
 )
 
-const filteredModalTemplates = computed(() => {
-    if (!modalCategory.value) return allTemplates.value
-    return allTemplates.value.filter(t => t.category === modalCategory.value)
+const filteredTemplates = computed(() => {
+    if (selectedCategory.value === 'All') return allTemplates.value
+    return allTemplates.value.filter(t => t.category === selectedCategory.value)
 })
 
 const isEditing = computed(() => !!props.habit)
@@ -688,7 +702,7 @@ const form = useForm({
 })
 
 // Wizard State
-const currentStep           = ref(0)
+const currentStep           = ref(-1) // -1 = start screen
 const previousStep          = ref(0)
 const isCreatingNewCategory = ref(false)
 const showDescription       = ref(false)

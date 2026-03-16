@@ -23,6 +23,7 @@ export function useShortcuts(extras = {}) {
             ai_widget:   'q',
             focus_mode:  'z',
             diary:       'j',
+            jobs:        'b',
         }
     }
 
@@ -76,6 +77,7 @@ export function useShortcuts(extras = {}) {
             [shortcuts.ai_coach]:   () => router.visit(route('ai.index')),
             [shortcuts.mood]:       () => router.visit(route('mood.index')),
             [shortcuts.pomodoro]:   () => router.visit(route('pomodoro')),
+            [shortcuts.jobs]:       () => router.visit(route('jobs.index')),
         }
 
         if (navigationMap[key]) {

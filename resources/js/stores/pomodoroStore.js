@@ -19,6 +19,21 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
         return `${m}:${s}`
     })
 
+    const modeLabel = computed(() => 
+        currentMode.value === 'work' ? '🍅 Focus' : '☕ Break'
+    )
+
+    const modeColor = computed(() => 
+        currentMode.value === 'work' ? 'bg-indigo-600' : 'bg-green-600'
+    )
+
+    const resumeIfRunning = () => {
+        if (isRunning.value && timeLeft.value > 0) {
+            if (interval) clearInterval(interval)
+            interval = setInterval(tick, 1000)
+        }
+    }
+
     const start = async () => {
         if (!sessionId.value) {
             try {
@@ -98,6 +113,16 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
     return {
         isRunning, timeLeft, currentMode, workMinutes,
         breakMinutes, sessionsCount, sessionId, selectedHabit,
-        formattedTime, start, pause, reset, sessionComplete
+        formattedTime, modeLabel, modeColor,
+        start, pause, reset, sessionComplete, resumeIfRunning
     }
-}, { persist: true })
+}, { 
+    persist: {
+        key: 'growthzone-pomodoro',
+        paths: [
+            'isRunning', 'timeLeft', 'currentMode',
+            'workMinutes', 'breakMinutes', 'sessionsCount',
+            'sessionId', 'selectedHabit'
+        ]
+    } 
+})

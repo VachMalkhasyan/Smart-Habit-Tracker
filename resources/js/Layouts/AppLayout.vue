@@ -1,4 +1,5 @@
 <template>
+    <Head :title="pageTitle" />
     <div class="flex h-screen bg-gray-50 dark:bg-gray-800">
 
         <!-- Sidebar -->
@@ -68,7 +69,7 @@
                     </div>
                 </Link>
 
-                <XpBar :xp="$page.props.xp_progress" />
+                <XpBar :xp="$page.props.xp_progress" :collapsed="collapsed" />
 
 
 
@@ -96,11 +97,11 @@
                     <slot name="header-actions" />
                     <!-- Show mini timer in navbar when running but not on pomodoro page -->
                     <div v-if="pomodoro.isRunning && !isOnPomodoroPage"
-                        class="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 shadow-sm
-                               text-white text-sm rounded-lg cursor-pointer transition-transform hover:scale-105"
+                        :class="['flex items-center gap-2 px-3 py-1.5 shadow-sm text-white text-sm rounded-lg cursor-pointer transition-transform hover:scale-105', pomodoro.modeColor]"
                         @click="router.visit('/pomodoro')">
-                        <span class="animate-pulse">🍅</span>
+                        <span class="animate-pulse">{{ pomodoro.currentMode === 'work' ? '🍅' : '☕' }}</span>
                         <span class="font-mono font-bold tabular-nums">{{ pomodoro.formattedTime }}</span>
+                        <span class="text-xs opacity-75">{{ pomodoro.modeLabel }}</span>
                     </div>
                     <NotificationBell
                         ref="notificationBellRef"
@@ -132,8 +133,8 @@
 </template>
 
 <script setup>
-import {computed, ref} from 'vue'
-import { Link, router, usePage } from '@inertiajs/vue3'
+import { computed, ref, onMounted } from 'vue'
+import { Link, router, usePage, Head } from '@inertiajs/vue3'
 import {
     LayoutDashboard,
     ListChecks,
@@ -148,7 +149,8 @@ import {
     Users,
     Timer,
     Bot,
-    Smile
+    Smile,
+    Briefcase
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -177,6 +179,10 @@ const notificationBellRef   = ref(null)
 const pomodoro              = usePomodoroStore()
 const isOnPomodoroPage      = computed(() => page.url.startsWith('/pomodoro'))
 
+onMounted(() => {
+    pomodoro.resumeIfRunning()
+})
+
 // Reactive unread count — initialized from Inertia shared props
 const unreadCount = ref(page.props.unread_notifications_count ?? 0)
 
@@ -189,9 +195,9 @@ const navItems = [
     { label: 'Mood',        href: route('mood.index'),  icon: Smile },
     { label: 'My Habits',   href: route('habits.index'), icon: ListChecks },
     { label: 'New Habit',   href: route('habits.create'), icon: PlusCircle },
-    { label: 'Templates',  href: route('templates.index'),  icon: LayoutTemplate },
     { label: 'Analytics',  href: route('analytics'),        icon: BarChart2 },
     { label: 'AI Coach',   href: route('ai.index'),         icon: Bot },
+    { label: 'Job Tracker',href: route('jobs.index'),       icon: Briefcase, badge: page.props.upcoming_interviews_today },
     { label: 'Categories',  href: route('categories.index'), icon: Tag },
     { label: 'Friends', href: route('friends.index'), icon: Users },
     { label: 'Settings',    href: route('settings'),     icon: Settings },
@@ -200,6 +206,14 @@ const navItems = [
 ]
 
 const isActive = (href) => page.url.startsWith(new URL(href).pathname)
+
+const pageTitle = computed(() => {
+    let base = props.title || 'GrowthZone'
+    if (pomodoro.isRunning) {
+        return `${pomodoro.formattedTime} ${pomodoro.currentMode === 'work' ? '🍅' : '☕'} | ${base}`
+    }
+    return base
+})
 
 const logout = () => router.post(route('logout'))
 

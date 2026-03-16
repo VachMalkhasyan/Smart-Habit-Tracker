@@ -6,6 +6,7 @@ use App\Models\HabitTemplate;
 use App\Models\HabitCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 
 class TemplateController extends Controller
@@ -42,8 +43,9 @@ class TemplateController extends Controller
             'start_date'    => today(),
         ]);
 
-        return back()->with('success', "'{$habit->name}' added to your habits! ✅");
+        return Redirect::route('habits.index')->with('success', 'Habit added! ✨');
     }
+
 
     private function matchCategory(string $categoryName, User $user): ?int
     {
