@@ -19,13 +19,13 @@ class JobApplication extends Model
     ];
 
     protected $casts = [
-        'is_remote'       => 'boolean',
+        'ats_analysis'    => 'array',
+        'ats_analyzed_at' => 'datetime',
         'applied_date'    => 'date',
+        'is_remote'       => 'boolean',
         'salary_min'      => 'integer',
         'salary_max'      => 'integer',
         'priority'        => 'integer',
-        'ats_analysis'    => 'array',
-        'ats_analyzed_at' => 'datetime',
     ];
 
     // Status labels for frontend

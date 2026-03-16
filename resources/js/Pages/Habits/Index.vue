@@ -140,7 +140,7 @@
                               class="text-xs px-2.5 py-1 rounded-full font-medium capitalize">
                             {{ habit.status }}
                         </span>
-                        <div class="flex items-center gap-1 text-gray-400 dark:text-gray-500">
+                        <div v-if="habit.deadline_value && habit.deadline_unit" class="flex items-center gap-1 text-gray-400 dark:text-gray-500">
                             <Calendar class="w-3.5 h-3.5" />
                             <span class="text-xs">{{ habit.deadline_value }}{{ habit.deadline_unit[0] }}</span>
                         </div>

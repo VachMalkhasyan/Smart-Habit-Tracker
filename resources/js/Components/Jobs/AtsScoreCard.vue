@@ -13,7 +13,20 @@ const analyzing = ref(false)
 const displayedScore = ref(0)
 
 const score = computed(() => props.application?.ats_score || 0)
-const analysis = computed(() => props.application?.ats_analysis || {})
+const analysis = computed(() => {
+    const raw = props.application?.ats_analysis
+    if (!raw) return {}
+    // Handle case where it comes as string instead of object
+    if (typeof raw === 'string') {
+        try { 
+            return JSON.parse(raw) 
+        } catch (e) { 
+            console.error('Failed to parse ats_analysis:', e)
+            return {} 
+        }
+    }
+    return raw
+})
 
 const scoreColor = (s) => {
     if (s >= 75) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800'
@@ -122,11 +135,11 @@ const handleAnalyze = () => {
                         ✅ Matching Skills
                     </h4>
                     <div class="flex flex-wrap gap-1.5">
-                        <span v-for="skill in analysis.matching_skills" :key="skill"
+                        <span v-for="skill in (analysis.matching_skills ?? [])" :key="skill"
                             class="text-[10px] px-2 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-md border border-green-100 dark:border-green-800">
                             {{ skill }}
                         </span>
-                        <span v-if="!analysis.matching_skills?.length" class="text-xs text-gray-400">None detected</span>
+                        <span v-if="!(analysis.matching_skills?.length)" class="text-xs text-gray-400">None detected</span>
                     </div>
                 </div>
                 <div class="space-y-2">
@@ -134,11 +147,11 @@ const handleAnalyze = () => {
                         ❌ Missing Skills
                     </h4>
                     <div class="flex flex-wrap gap-1.5">
-                        <span v-for="skill in analysis.missing_skills" :key="skill"
+                        <span v-for="skill in (analysis.missing_skills ?? [])" :key="skill"
                             class="text-[10px] px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-md border border-red-100 dark:border-red-800">
                             {{ skill }}
                         </span>
-                        <span v-if="!analysis.missing_skills?.length" class="text-xs text-gray-400">None identified</span>
+                        <span v-if="!(analysis.missing_skills?.length)" class="text-xs text-gray-400">None identified</span>
                     </div>
                 </div>
             </div>
@@ -148,7 +161,7 @@ const handleAnalyze = () => {
                     💡 CV Tips for This Role
                 </h4>
                 <ul class="text-xs text-gray-600 dark:text-gray-400 space-y-2">
-                    <li v-for="tip in analysis.cv_tips_for_this_role" :key="tip" class="flex gap-2">
+                    <li v-for="tip in (analysis.cv_tips_for_this_role ?? [])" :key="tip" class="flex gap-2">
                         <span class="text-indigo-400">•</span> {{ tip }}
                     </li>
                 </ul>

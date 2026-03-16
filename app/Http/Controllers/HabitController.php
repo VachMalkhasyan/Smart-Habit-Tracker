@@ -91,11 +91,11 @@ class HabitController extends Controller
 
         unset($validated['new_category_name']);
 
-        $request->user()->habits()->create($validated);
+        $habit = $request->user()->habits()->create($validated);
         
         $request->user()->update(['last_weekly_summary_date' => null]);
 
-        return Redirect::route('habits.index')->with('success', 'Habit created!');
+        return redirect()->route('habits.index')->with('success', 'Habit created! ✨');
     }
 
     /**

@@ -110,14 +110,31 @@ const getScoreColor = (score) => {
   return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400'
 }
 
-// Generate last 7 days for the weekly strip
-const last7Days = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date()
-  d.setDate(d.getDate() - (6 - i))
-  return {
-    date: d.toISOString().split('T')[0],
-    label: d.toLocaleDateString('en-US', { weekday: 'short' })
-  }
+import dayjs from 'dayjs'
+import weekday from 'dayjs/plugin/weekday'
+import isToday from 'dayjs/plugin/isToday'
+dayjs.extend(weekday)
+dayjs.extend(isToday)
+
+const weekDays = computed(() => {
+    const days = []
+    // Get start of current week (Monday)
+    const startOfWeek = dayjs().startOf('week').add(1, 'day')
+
+    for (let i = 0; i < 7; i++) {
+        const date     = startOfWeek.add(i, 'day')
+        const dateStr  = date.format('YYYY-MM-DD')
+        const moodLog  = props.weekly_moods.find(m => m.logged_date?.startsWith(dateStr))
+
+        days.push({
+            date:      dateStr,
+            dayLabel:  date.format('ddd'),    // Mon, Tue...
+            dayNum:    date.format('D'),       // 1, 2...
+            isToday:   date.isToday(),
+            mood:      moodLog ?? null,
+        })
+    }
+    return days
 })
 </script>
 
@@ -176,22 +193,38 @@ const last7Days = Array.from({ length: 7 }, (_, i) => {
              </Badge>
           </div>
         </CardHeader>
-        <CardContent>
-          <div class="grid grid-cols-7 gap-4">
-            <div v-for="day in last7Days" :key="day.date" class="flex flex-col items-center gap-3">
-              <span class="text-xs font-bold text-slate-400 uppercase">{{ day.label }}</span>
-              <div 
-                class="w-full aspect-square rounded-2xl flex items-center justify-center text-2xl transition-all hover:scale-110 cursor-default shadow-sm border"
-                :class="getScoreColor(weekly_moods.find(m => m.logged_date.startsWith(day.date))?.score)"
-              >
-                {{ getDayEmoji(day.date) }}
-              </div>
-              <span v-if="weekly_moods.find(m => m.logged_date.startsWith(day.date))" class="text-[10px] font-medium text-slate-500">
-                {{ weekly_moods.find(m => m.logged_date.startsWith(day.date))?.label }}
-              </span>
+          <div class="grid grid-cols-7 gap-2">
+            <div v-for="day in weekDays" :key="day.date"
+                :class="['flex flex-col items-center gap-1 p-2 rounded-xl transition-all',
+                         day.isToday ? 'bg-indigo-50 dark:bg-indigo-900/20 ring-1 ring-indigo-200 dark:ring-indigo-800' : '']">
+
+                <!-- Day label -->
+                <span class="text-xs text-gray-400 dark:text-gray-500 font-medium uppercase">
+                    {{ day.dayLabel }}
+                </span>
+
+                <!-- Mood emoji or empty circle -->
+                <div v-if="day.mood"
+                    class="text-2xl cursor-default hover:scale-110 transition-transform"
+                    :title="day.mood.label">
+                    {{ day.mood.emoji }}
+                </div>
+                <div v-else
+                    class="w-10 h-10 rounded-full border-2 border-dashed
+                           border-gray-200 dark:border-gray-700 flex items-center
+                           justify-center text-gray-300 dark:text-gray-600 text-xs shadow-sm">
+                    —
+                </div>
+
+                <!-- Day number -->
+                <span :class="['text-xs font-bold mt-1',
+                    day.isToday
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : 'text-gray-400 dark:text-gray-500']">
+                    {{ day.dayNum }}
+                </span>
             </div>
           </div>
-        </CardContent>
       </Card>
 
       <!-- Section 3: Correlation -->

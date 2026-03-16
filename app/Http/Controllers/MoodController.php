@@ -14,7 +14,13 @@ class MoodController extends Controller
 
         return Inertia::render('Mood/Index', [
             'today_mood'    => $user->todaysMood(),
-            'weekly_moods'  => $user->moodLogs()->thisWeek()->orderBy('logged_date')->get(),
+            'weekly_moods'  => $user->moodLogs()
+                ->whereBetween('logged_date', [
+                    now()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString(),
+                    now()->endOfWeek(\Carbon\Carbon::SUNDAY)->toDateString(),
+                ])
+                ->orderBy('logged_date')
+                ->get(),
             'monthly_moods' => $user->moodLogs()
                 ->whereMonth('logged_date', now()->month)
                 ->orderBy('logged_date')

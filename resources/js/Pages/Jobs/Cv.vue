@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import SecondaryButton from '@/Components/SecondaryButton.vue'
@@ -74,18 +74,22 @@ const submitText = () => {
 }
 
 const setActiveCv = (id) => {
-    axios.post(route('cv.activate', id)).then(() => {
-        window.location.reload()
+    router.post(route('cv.activate', id), {}, {
+        onSuccess: () => {
+            // Optional: add toast
+        }
     })
 }
 
-const deleteCv = (id) => {
-    if (confirm('Are you sure you want to delete this CV?')) {
-        axios.delete(route('cv.destroy', id)).then(() => {
-            window.location.reload()
-        })
+const deleteCv = (id, title) => {
+    if (confirm(`Delete "${title}"? This cannot be undone.`)) {
+        router.delete(route('cv.destroy', id))
     }
 }
+
+const formatDate = (dt) => dt
+    ? new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : ''
 
 const getImprovements = async (id) => {
     loadingImprovements.value = true
@@ -204,51 +208,41 @@ const getScoreColor = (score) => {
                     <div class="space-y-4">
                         <h3 class="text-sm font-bold text-gray-500 uppercase tracking-widest px-2">Saved CVs</h3>
                         <div v-for="cv in cvs" :key="cv.id" 
-                            class="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm group hover:border-indigo-200 dark:hover:border-indigo-800 transition-all overflow-hidden relative"
-                            :class="{'ring-2 ring-indigo-500/20 border-indigo-300 dark:border-indigo-700': cv.is_active}"
+                            @click="cv.is_active ? null : setActiveCv(cv.id)"
+                            class="bg-white dark:bg-gray-900 border-2 rounded-2xl p-4 shadow-sm group cursor-pointer transition-all relative overflow-hidden"
+                            :class="cv.is_active 
+                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' 
+                                : 'border-gray-100 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700'"
                         >
-                            <div class="flex items-start justify-between">
-                                <div class="flex gap-3">
-                                    <div class="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
-                                        <FileText class="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <h4 class="font-bold text-gray-900 dark:text-white">{{ cv.title }}</h4>
-                                            <span v-if="cv.is_active" class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Active</span>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-0.5">Uploaded {{ new Date(cv.created_at).toLocaleDateString() }} • {{ cv.file_type || 'Text' }}</p>
-                                    </div>
-                                </div>
+                            <!-- Active Badge -->
+                            <div v-if="cv.is_active"
+                                class="absolute top-3 right-12 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                                ✓ Active
+                            </div>
 
-                                <Menu as="div" class="relative inline-block text-left">
-                                    <MenuButton class="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                                        <MoreHorizontal class="w-5 h-5" />
-                                    </MenuButton>
-                                    <transition enter-active-class="transition duration-100 ease-out" enter-from-class="transform scale-95 opacity-0" enter-to-class="transform scale-100 opacity-100" leave-active-class="transition duration-75 ease-in" leave-from-class="transform scale-100 opacity-100" leave-to-class="transform scale-95 opacity-0">
-                                        <MenuItems class="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 dark:divide-gray-800 rounded-xl bg-white dark:bg-gray-900 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none z-10 border border-gray-200 dark:border-gray-800">
-                                            <div class="px-1 py-1">
-                                                <MenuItem v-slot="{ active }">
-                                                    <button @click="setActiveCv(cv.id)" :class="[active ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20' : 'text-gray-900 dark:text-white', 'group flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-all']">
-                                                        <CheckCircle class="mr-2 h-4 w-4" /> Set as Active
-                                                    </button>
-                                                </MenuItem>
-                                                <MenuItem v-if="cv.file_path" v-slot="{ active }">
-                                                    <a :href="`/storage/${cv.file_path}`" download :class="[active ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20' : 'text-gray-900 dark:text-white', 'group flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-all']">
-                                                        <Download class="mr-2 h-4 w-4" /> Download Original
-                                                    </a>
-                                                </MenuItem>
-                                            </div>
-                                            <div class="px-1 py-1">
-                                                <MenuItem v-slot="{ active }">
-                                                    <button @click="deleteCv(cv.id)" :class="[active ? 'bg-red-50 text-red-600 dark:bg-red-900/20' : 'text-red-600', 'group flex w-full items-center rounded-lg px-3 py-2 text-sm font-medium transition-all']">
-                                                        <Trash2 class="mr-2 h-4 w-4" /> Delete CV
-                                                    </button>
-                                                </MenuItem>
-                                            </div>
-                                        </MenuItems>
-                                    </transition>
-                                </Menu>
+                            <!-- Delete Button -->
+                            <button
+                                @click.stop="deleteCv(cv.id, cv.title)"
+                                class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all rounded-lg"
+                                title="Delete CV"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                            </button>
+
+                            <div class="flex items-start gap-3 pr-16">
+                                <div class="w-10 h-10 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
+                                    <FileText class="w-5 h-5" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <h4 class="font-bold text-gray-900 dark:text-white truncate">{{ cv.title }}</h4>
+                                    <p class="text-xs text-gray-500 mt-0.5 truncate">
+                                        {{ cv.file_name ?? 'Pasted text' }} • {{ formatDate(cv.created_at) }}
+                                    </p>
+                                    <p v-if="cv.parsed_data?.skills?.length" class="text-[10px] font-bold text-indigo-500 mt-1 truncate">
+                                        {{ cv.parsed_data.skills.slice(0, 4).join(', ') }}
+                                        {{ cv.parsed_data.skills.length > 4 ? `+${cv.parsed_data.skills.length - 4}` : '' }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

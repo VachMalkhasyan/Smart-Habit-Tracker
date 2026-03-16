@@ -90,11 +90,14 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json([
             'has_active_session' => (bool) $active,
             'session'            => $active ? [
-                'id'            => $active->id,
-                'work_minutes'  => $active->work_minutes,
-                'break_minutes' => $active->break_minutes,
-                'started_at'    => $active->started_at,
-                'habit'         => $active->habit?->name,
+                'id'                => $active->id,
+                'work_minutes'      => $active->work_minutes,
+                'break_minutes'     => $active->break_minutes,
+                'started_at'        => $active->started_at->toISOString(),
+                'elapsed_seconds'   => now()->diffInSeconds($active->started_at),
+                'remaining_seconds' => max(0, ($active->work_minutes * 60) - now()->diffInSeconds($active->started_at)),
+                'habit'             => $active->habit?->name,
+                'mode'              => 'work', // Always work for an active tracked session
             ] : null,
         ]);
     });

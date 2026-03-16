@@ -906,19 +906,25 @@ Data:
         ]);
 
         $content  = $response->json('choices.0.message.content') ?? '{}';
-        $clean    = preg_replace('/```json|```/', '', $content);
-        $analysis = json_decode(trim($clean), true);
+        // Strip any markdown fences Groq might add
+        $clean    = preg_replace('/```json\s*|\s*```/', '', $content);
+        $clean    = trim($clean);
+        // Find JSON object — sometimes Groq adds text before/after
+        preg_match('/\{.*\}/s', $clean, $matches);
+        $jsonStr  = $matches[0] ?? '{}';
+        $analysis = json_decode($jsonStr, true);
 
-        if (!$analysis || !isset($analysis['score'])) {
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($analysis['score'])) {
+            Log::error('ATS JSON parse failed: ' . $content);
             $analysis = [
-                'score'          => 0,
-                'verdict'        => 'Analysis failed',
-                'summary'        => 'Could not analyze. Please try again.',
-                'matching_skills'=> [],
-                'missing_skills' => [],
-                'strengths'      => [],
-                'gaps'           => [],
-                'recommendation' => 'Try again',
+                'score'           => 50,
+                'verdict'         => 'Analysis incomplete',
+                'summary'         => 'Could not fully analyze. Please try again.',
+                'matching_skills' => [],
+                'missing_skills'  => [],
+                'strengths'       => [],
+                'gaps'            => [],
+                'recommendation'  => 'Try again',
                 'cv_tips_for_this_role' => [],
             ];
         }

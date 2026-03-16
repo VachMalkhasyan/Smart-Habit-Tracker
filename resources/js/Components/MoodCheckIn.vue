@@ -48,7 +48,7 @@ const form = useForm({
   tags: props.currentMood?.tags || []
 })
 
-const selectedMood = computed(() => moods.find(m => m.score === form.score))
+const selectedMood = computed(() => moods.find(m => m.score == form.score))
 
 const toggleTag = (tag) => {
   const index = form.tags.indexOf(tag)

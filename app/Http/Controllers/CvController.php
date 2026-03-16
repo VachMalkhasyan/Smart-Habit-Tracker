@@ -106,7 +106,7 @@ class CvController extends Controller
         }
 
         $analysis = app(AiService::class)->scoreJobFit($cv, $jobApplication);
-        return response()->json(['analysis' => $analysis]);
+        return back()->with('success', 'ATS Match Score calculated! ✨');
     }
 
     public function destroy(Request $request, UserCv $userCv)

@@ -149,7 +149,7 @@ const priorityClass = (p) => ({
 const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
 
 const selectTemplate = (template) => {
-    router.visit(route('habits.create', { template: template.id }))
+    router.post(route('templates.quick-add', { template: template.id }))
 }
 
 const quickAddTemplate = (template) => {

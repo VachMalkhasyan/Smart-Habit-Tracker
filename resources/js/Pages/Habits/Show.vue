@@ -282,13 +282,28 @@ const completionRate = computed(() => {
 })
 
 // Details list
-const details = computed(() => [
-    { label: 'Start Date',  value: dayjs(habit.value.start_date).format('MMM D, YYYY'), icon: Calendar },
-    { label: 'Duration',    value: `${habit.value.deadline_value} ${habit.value.deadline_unit}`, icon: RefreshCw },
-    { label: 'Goal',        value: `${habit.value.goal} ${habit.value.goal_unit}`, icon: Target },
-    { label: 'Priority',    value: { 1: 'High', 2: 'Medium', 3: 'Low' }[habit.value.priority], icon: Flag },
-    { label: 'End Date',    value: dayjs(habit.value.start_date).add(habit.value.deadline_value, habit.value.deadline_unit).format('MMM D, YYYY'), icon: Calendar },
-])
+const details = computed(() => {
+    const list = [
+        { label: 'Start Date',  value: dayjs(habit.value.start_date).format('MMM D, YYYY'), icon: Calendar },
+        { label: 'Goal',        value: `${habit.value.goal} ${habit.value.goal_unit}`, icon: Target },
+        { label: 'Priority',    value: { 1: 'High', 2: 'Medium', 3: 'Low' }[habit.value.priority], icon: Flag },
+    ]
+
+    if (habit.value.deadline_value && habit.value.deadline_unit) {
+        list.push({
+            label: 'Duration',
+            value: `${habit.value.deadline_value} ${habit.value.deadline_unit}`,
+            icon: RefreshCw
+        })
+        list.push({
+            label: 'End Date',
+            value: dayjs(habit.value.start_date).add(habit.value.deadline_value, habit.value.deadline_unit).format('MMM D, YYYY'),
+            icon: Calendar
+        })
+    }
+
+    return list
+})
 
 // Helpers
 const formatDate = (date) => dayjs(date).format('MMM D, YYYY')

@@ -82,20 +82,31 @@ async function syncWithApp() {
         const res  = await apiGet('/api/extension/pomodoro')
         const data = await res.json()
 
-        if (data.has_active_session && !timerRunning) {
-            // App has active session — calculate remaining time
-            const startedAt  = new Date(data.session.started_at)
-            const elapsed    = Math.floor((Date.now() - startedAt) / 1000)
-            const totalSecs  = data.session.work_minutes * 60
-            const remaining  = Math.max(0, totalSecs - elapsed)
+        if (data.has_active_session && data.session) {
+            const session = data.session
 
-            workMin      = data.session.work_minutes
-            breakMin     = data.session.break_minutes
-            timerSeconds = remaining
+            workMin      = session.work_minutes
+            breakMin     = session.break_minutes
+            timerSeconds = session.remaining_seconds
             currentMode  = 'work'
 
+            chrome.storage.local.set({
+                workMin, breakMin, timerSeconds, currentMode
+            })
+
             updateTimerDisplay()
-            // Assume habit is handled/displayed if wanted
+            
+            // Auto-start extension timer if an active session is found
+            if (!timerRunning) {
+                startLocalInterval(false)
+            }
+
+            const banner = document.getElementById('sync-banner')
+            if (banner) {
+                banner.textContent = `⚡ Synced with app${session.habit ? ' — ' + session.habit : ''}`
+                banner.classList.remove('hidden')
+                setTimeout(() => banner.classList.add('hidden'), 3000)
+            }
         }
     } catch (e) {
         console.log('Sync failed', e)
@@ -403,7 +414,7 @@ function sessionDone() {
 
 function updateTimerDisplay() {
     const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0')
-    const s = (timerSeconds % 60).toString().padStart(2, '0')
+    const s = Math.floor(timerSeconds % 60).toString().padStart(2, '0')
     timerTime.textContent = `${m}:${s}`
     timerMode.textContent = currentMode === 'work' ? 'Focus time 🍅' : 'Break time ☕'
 }
