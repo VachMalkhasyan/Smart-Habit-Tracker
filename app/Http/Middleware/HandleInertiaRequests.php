@@ -57,6 +57,12 @@ class HandleInertiaRequests extends Middleware
                 ->count() ?? 0,
             'today_mood'        => $request->user()?->todaysMood(),
             'daily_affirmation' => $request->user()?->daily_affirmation,
+            'upcoming_interviews_today' => $request->user()
+                ?->jobInterviews()
+                ->whereDate('scheduled_at', today())
+                ->where('outcome', 'pending')
+                ->count() ?? 0,
+            'has_cv' => $request->user()?->activeCV() !== null,
         ]);
     }
 }

@@ -142,6 +142,29 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['success' => true, 'unread_count' => 0]);
     });
 
+    Route::get('/extension/jobs', function (Request $request) {
+        $user = $request->user();
+
+        return response()->json([
+            'stats'               => $user->jobSearchStats(),
+            'upcoming_interviews' => $user->jobInterviews()
+                ->with('application')
+                ->where('scheduled_at', '>=', now())
+                ->where('outcome', 'pending')
+                ->orderBy('scheduled_at')
+                ->take(3)
+                ->get()
+                ->map(fn($i) => [
+                    'id'           => $i->id,
+                    'type'         => $i->interview_type,
+                    'company'      => $i->application->company_name,
+                    'role'         => $i->application->role_title,
+                    'scheduled_at' => $i->scheduled_at->toISOString(),
+                    'has_prep'     => (bool) $i->ai_prep,
+                ]),
+        ]);
+    });
+
 });
 
 Route::post('/extension/token', function (Request $request) {

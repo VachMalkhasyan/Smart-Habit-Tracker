@@ -195,6 +195,16 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(PomodoroSession::class);
     }
 
+    public function cvs(): HasMany
+    {
+        return $this->hasMany(UserCv::class);
+    }
+
+    public function activeCV(): ?UserCv
+    {
+        return $this->cvs()->where('is_active', true)->latest()->first();
+    }
+
     /**
      * Channel name for broadcast notifications — matches the existing private user.{id} channel.
      */
@@ -209,6 +219,42 @@ class User extends Authenticatable implements MustVerifyEmail
     public function aiConversations(): HasMany
     {
         return $this->hasMany(AiConversation::class);
+    }
+
+    public function jobApplications(): HasMany
+    {
+        return $this->hasMany(JobApplication::class);
+    }
+
+    public function jobInterviews(): HasMany
+    {
+        return $this->hasMany(JobInterview::class);
+    }
+
+    public function jobContacts(): HasMany
+    {
+        return $this->hasMany(JobContact::class);
+    }
+
+    // Stats helper used by AI context
+    public function jobSearchStats(): array
+    {
+        $apps = clone $this->jobApplications();
+        $total = $this->jobApplications()->count();
+        $applied = (clone $apps)->where('status', 'applied')->count();
+        $interviewing = (clone $apps)->whereIn('status', ['phone_screen', 'interview'])->count();
+        $offers = (clone $apps)->where('status', 'offer')->count();
+        $rejected = (clone $apps)->where('status', 'rejected')->count();
+        $thisWeek = (clone $apps)->where('applied_date', '>=', now()->startOfWeek())->count();
+        
+        return [
+            'total'        => $total,
+            'applied'      => $applied,
+            'interviewing' => $interviewing,
+            'offers'       => $offers,
+            'rejected'     => $rejected,
+            'this_week'    => $thisWeek,
+        ];
     }
 }
 

@@ -148,7 +148,8 @@ import {
     Users,
     Timer,
     Bot,
-    Smile
+    Smile,
+    Briefcase
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -192,6 +193,7 @@ const navItems = [
     { label: 'Templates',  href: route('templates.index'),  icon: LayoutTemplate },
     { label: 'Analytics',  href: route('analytics'),        icon: BarChart2 },
     { label: 'AI Coach',   href: route('ai.index'),         icon: Bot },
+    { label: 'Job Tracker',href: route('jobs.index'),       icon: Briefcase, badge: page.props.upcoming_interviews_today },
     { label: 'Categories',  href: route('categories.index'), icon: Tag },
     { label: 'Friends', href: route('friends.index'), icon: Users },
     { label: 'Settings',    href: route('settings'),     icon: Settings },

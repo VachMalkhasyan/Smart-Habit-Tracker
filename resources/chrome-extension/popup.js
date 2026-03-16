@@ -465,3 +465,49 @@ function setupTabs() {
         })
     })
 }
+
+async function loadJobs() {
+    document.getElementById('jobs-loading').classList.remove('hidden')
+    try {
+        const res  = await apiGet('/api/extension/jobs')
+        const data = await res.json()
+
+        document.getElementById('jobs-loading').classList.add('hidden')
+        document.getElementById('jobs-stats').classList.remove('hidden')
+
+        document.getElementById('jobs-applied').textContent =
+            `${data.stats.applied} Applied`
+        document.getElementById('jobs-interviewing').textContent =
+            `${data.stats.interviewing} Interviews`
+        document.getElementById('jobs-offers').textContent =
+            `${data.stats.offers} Offers`
+
+        const container = document.getElementById('upcoming-interviews')
+        if (data.upcoming_interviews.length === 0) {
+            container.innerHTML =
+                '<p class="muted text-center" style="padding:8px 0">No upcoming interviews</p>'
+        } else {
+            container.innerHTML = data.upcoming_interviews.map(i => `
+                <div class="habit-item">
+                    <div class="habit-check done">🗓️</div>
+                    <div style="flex:1">
+                        <p class="habit-name">${i.type} — ${i.company}</p>
+                        <p class="muted">${new Date(i.scheduled_at)
+                            .toLocaleDateString('en-US', {
+                                weekday: 'short', month: 'short',
+                                day: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}</p>
+                    </div>
+                    ${i.has_prep ? '<span style="color:#4f46e5;font-size:11px">AI Ready ✓</span>' : ''}
+                </div>
+            `).join('')
+        }
+    } catch (e) {
+        document.getElementById('jobs-loading').textContent = 'Failed to load jobs'
+    }
+}
+
+// Call loadJobs when jobs tab is clicked
+document.querySelector('[data-tab="jobs"]')
+    .addEventListener('click', loadJobs)
+
