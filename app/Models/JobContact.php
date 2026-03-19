@@ -22,8 +22,8 @@ class JobContact extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function application(): BelongsTo
+    public function jobApplication(): BelongsTo
     {
-        return $this->belongsTo(JobApplication::class);
+        return $this->belongsTo(JobApplication::class, 'job_application_id');
     }
 }

@@ -25,83 +25,177 @@ use Illuminate\Support\Facades\Log;
 class AiService
 {
     /**
-     * Builds the full personalized system prompt. Pulls live data from the user's relationships.
+     * Builds the full personalized system prompt.
+     * ALWAYS uses fresh DB queries — never stale cached model data.
      */
     public function buildSystemPrompt(User $user): string
     {
-        $activeHabits = $user->habits()->where('status', 'active')->get();
-        $habitList = $activeHabits->map(function ($h) {
-            $catName = $h->category ? $h->category->name : 'None';
-            return "- {$h->name} | Streak: {$h->current_streak} days | Priority: {$h->priority} | Category: {$catName}";
-        })->implode("\n");
+        // Always fresh — never use cached $user relationships
+        $user  = $user->fresh();
+        $today = now()->toDateString();
 
-        $longestStreak = $user->habits()->max('longest_streak') ?: 0;
-        $habitsCompletedToday = $activeHabits->filter(fn($h) => $h->completed_today)->count();
-        $totalActive = $activeHabits->count();
+        // ── HABITS ──
+        $activeHabits = \App\Models\Habit::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->with(['completions' => fn($q) => $q->whereDate('completed_at', $today)])
+            ->orderBy('priority')
+            ->get();
 
-        // Calculate a rough completion rate this week for context
-        // This is a placeholder as precise analytic week calculations can be heavy, but we'll use a basic metric
-        // For now, we'll keep the completion rate and weak days as placeholders for future expansion
+        $totalHabits    = $activeHabits->count();
+        $completedToday = $activeHabits->filter(
+            fn($h) => $h->completions->where('is_done', true)->count() > 0
+        )->count();
+        $pendingToday   = $totalHabits - $completedToday;
+        $allDoneToday   = $totalHabits > 0 && $pendingToday === 0;
 
-            
-        $moodThisWeek = $user->moodLogs()->thisWeek()->orderBy('logged_date')->get();
-        $moodContext  = $moodThisWeek->isEmpty()
-            ? 'Not tracking mood yet'
-            : $moodThisWeek->map(fn($m) =>
-                "{$m->logged_date->format('D')}: {$m->emoji} {$m->label} ({$m->score}/5)"
-                . ($m->note ? " — \"{$m->note}\"" : '')
-              )->implode(', ');
+        $habitsContext = $activeHabits->map(fn($h) =>
+            "- {$h->name} | Streak: {$h->current_streak}d | " .
+            "Priority: " . (['', 'High', 'Medium', 'Low'][$h->priority] ?? $h->priority) . " | " .
+            "Today: " . ($h->completions->where('is_done', true)->count() > 0 ? '✅ Done' : '⏳ Pending')
+        )->implode("\n");
 
-        $recentDiary = "No diary entries yet"; // Placeholder
-        $goals = $user->settings['goals'] ?? 'None explicitly set';
-        $jobContext = $this->generateJobSearchSummary($user);
+        // ── MOOD ──
+        $todayMood = \App\Models\MoodLog::where('user_id', $user->id)
+            ->whereDate('logged_date', $today)
+            ->first();
 
-        $cvContext = '';
-        $activeCV  = $user->activeCV();
-        if ($activeCV) {
-            $parsed   = $activeCV->parsed_data ?? [];
-            $cvContext = "
-USER'S CV / BACKGROUND:
-- Skills: " . implode(', ', array_slice($parsed['skills'] ?? [], 0, 10)) . "
-- Experience: " . ($parsed['years_experience'] ?? '?') . " years
-- Recent roles: " . implode(', ', array_slice($parsed['roles'] ?? [], 0, 3)) . "
-- Education: " . ($parsed['education'] ?? 'Not specified');
+        $weeklyMoods = \App\Models\MoodLog::where('user_id', $user->id)
+            ->whereBetween('logged_date', [
+                now()->startOfWeek()->toDateString(),
+                now()->endOfWeek()->toDateString(),
+            ])
+            ->orderBy('logged_date')
+            ->get()
+            ->map(fn($m) =>
+                now()->parse($m->logged_date)->format('D') .
+                ": {$m->emoji} {$m->label} ({$m->score}/5)" .
+                ($m->note ? " — \"{$m->note}\"" : '')
+            )->implode(', ');
+
+        $moodContext = $todayMood
+            ? "Today: {$todayMood->emoji} {$todayMood->label} ({$todayMood->score}/5)"
+              . ($todayMood->note ? " — \"{$todayMood->note}\"" : '')
+            : 'Not logged today';
+
+        // ── XP & LEVEL ──
+        $xpProgress = \App\Services\XpService::progressToNextLevel($user);
+        $levelTitle  = \App\Services\XpService::getLevelTitle($user->level);
+
+        // ── STREAKS ──
+        $topStreaks = $activeHabits
+            ->sortByDesc('current_streak')
+            ->take(3)
+            ->map(fn($h) => (string)$h->name . ': ' . (string)$h->current_streak . ' days')
+            ->implode(', ');
+
+        $streaksAtRisk = $activeHabits
+            ->filter(fn($h) =>
+                $h->current_streak > 0 &&
+                $h->completions->where('is_done', true)->count() === 0
+            )
+            ->map(fn($h) => (string)$h->name . ' (' . (string)$h->current_streak . ' days at risk)')
+            ->implode(', ');
+
+        // ── ANALYTICS — weak days ──
+        $weakDays = '';
+        try {
+            $last30 = \App\Models\Completion::where('user_id', $user->id)
+                ->where('is_done', true)
+                ->whereBetween('completed_at', [
+                    now()->subDays(30)->toDateString(),
+                    $today,
+                ])
+                ->selectRaw('DAYNAME(completed_at) as day_name, COUNT(*) as count')
+                ->groupBy('day_name')
+                ->orderBy('count')
+                ->take(2)
+                ->pluck('count', 'day_name');
+
+            $weakDays = $last30->map(fn($c, $d) => (string)$d . ': ' . (string)$c . ' completions')->implode(', ');
+        } catch (\Exception $e) {
+            // Analytics optional — don't break the prompt
         }
 
-        return "You are a personal habit coach and life assistant for {$user->name}.
-" . ($cvContext ? $cvContext . "\n" : "") . "
-Today is " . now()->format('l, F j, Y') . ".
+        // ── CV ──
+        $cvContext = '';
+        $activeCV  = $user->activeCV();
+        if ($activeCV?->parsed_data) {
+            $parsed    = $activeCV->parsed_data;
+            $cvContext = "
+CV / BACKGROUND:
+Skills: " . implode(', ', $parsed['skills'] ?? []) . "
+Experience: " . ($parsed['years_experience'] ?? '?') . " years
+Recent roles: " . implode(', ', array_slice($parsed['roles'] ?? [], 0, 3)) . "
+Education: " . ($parsed['education'] ?? 'Not specified');
+        }
 
-THEIR PROFILE:
-- Level: {$user->level}, Total XP: {$user->xp}
-- Member since: {$user->created_at->format('M Y')}
+        // ── JOB SEARCH ──
+        $jobContext = $this->generateJobSearchSummary($user);
 
-THEIR ACTIVE HABITS ({$totalActive} total):
-{$habitList}
+        // ── DIARY ──
+        $diaryContext = 'No diary entries yet';
 
-THEIR STREAK STATS:
-- Longest streak overall: {$longestStreak} days
-- Habits completed today: {$habitsCompletedToday} of {$totalActive}
+        // ── BUILD PROMPT ──
+        return "
+You are a personal growth coach and life assistant for {$user->name}.
+Today is " . now()->format('l, F j Y') . " — " . now()->format('g:i A') . ".
 
-THEIR GOALS (from onboarding):
-{$goals}
+═══════════════════════════════
+PROFILE
+═══════════════════════════════
+Name: {$user->name}
+Level: {$user->level} ({$levelTitle})
+XP: {$user->xp} total | {$xpProgress['progress_xp']}/{$xpProgress['needed_xp']} to Level {$xpProgress['next_level']}
+Member since: " . $user->created_at->format('M Y') . "
 
-JOB SEARCH STATUS:
+═══════════════════════════════
+TODAY'S HABITS — LIVE STATUS
+═══════════════════════════════
+Total active habits: {$totalHabits}
+Completed today: {$completedToday}/{$totalHabits}
+Status: " . ($allDoneToday ? '🎯 ALL DONE — incredible day!' : "⏳ {$pendingToday} still pending") . "
+
+{$habitsContext}
+
+═══════════════════════════════
+STREAKS
+═══════════════════════════════
+Top streaks: " . ($topStreaks ?: 'None yet') . "
+At risk today: " . ($streaksAtRisk ?: 'None — all covered!') . "
+Weak days (last 30d): " . ($weakDays ?: 'Not enough data') . "
+
+═══════════════════════════════
+MOOD
+═══════════════════════════════
+Today: {$moodContext}
+This week: " . ($weeklyMoods ?: 'No mood logged this week') . "
+
+═══════════════════════════════
+JOB SEARCH
+═══════════════════════════════
 {$jobContext}
 
-MOOD THIS WEEK:
-{$moodContext}
-Weekly average: {$user->weeklyMoodAverage()}/5
+{$cvContext}
 
-RECENT DIARY:
-{$recentDiary}
+═══════════════════════════════
+DIARY
+═══════════════════════════════
+{$diaryContext}
 
-INSTRUCTIONS:
-- Be warm, encouraging, and specific — never generic
-- Always reference their actual habit names and streak numbers
-- Keep responses concise (3-5 sentences max unless they ask for detail)
-- If they ask for a habit suggestion, consider what they already track
-- Never make up data — only reference what is provided above";
+═══════════════════════════════
+INSTRUCTIONS — FOLLOW STRICTLY
+═══════════════════════════════
+- ALWAYS use the live data above — never assume or guess
+- If habits show ✅ Done — do NOT tell user to complete them
+- If all habits are done — CELEBRATE, don't remind
+- Reference REAL habit names, REAL streak numbers, REAL mood
+- Never say 'I don't have access to your data' — you do, it's above
+- Keep responses under 120 words unless detail is requested
+- Sound like a warm, knowledgeable friend — never robotic
+- End with ONE specific actionable suggestion based on real data
+- If streaks are at risk — mention them specifically by name
+- If mood is low — acknowledge it with empathy first
+";
     }
 
     /**
@@ -858,8 +952,49 @@ Data:
 
     public function scoreJobFit(UserCv $cv, JobApplication $job): array
     {
-        $cvSummary = $cv->getSummaryForAi();
+        $cvSummary      = $cv->getSummaryForAi();
+        $jobDescription = '';
 
+        // ── Step 1: Try to fetch from job URL ──
+        if ($job->job_url) {
+            try {
+                $response = Http::timeout(10)
+                    ->withHeaders([
+                        'User-Agent' => 'Mozilla/5.0 (compatible; GrowthZone/1.0)',
+                    ])
+                    ->get($job->job_url);
+
+                if ($response->successful()) {
+                    $html = $response->body();
+                    $text = strip_tags($html);
+                    $text = preg_replace('/\s+/', ' ', $text);
+                    $text = trim($text);
+                    // First 3000 chars is enough to cover any job description
+                    $jobDescription = substr($text, 0, 3000);
+                }
+            } catch (\Exception $e) {
+                Log::info("Could not fetch job URL for ATS: {$job->job_url}");
+            }
+        }
+
+        // ── Step 2: Fall back to notes if URL fetch failed ──
+        if (empty($jobDescription) && $job->notes) {
+            $jobDescription = $job->notes;
+        }
+
+        // ── Step 3: Fall back to title + company only ──
+        $jobDescriptionSource = 'title_only';
+        if (!empty($jobDescription)) {
+            $jobDescriptionSource = ($job->job_url && str_contains($jobDescription, ' '))
+                ? 'url_fetched'
+                : 'notes';
+        } else {
+            $jobDescription = "Role: {$job->role_title} at {$job->company_name}. "
+                . ($job->location ? "Location: {$job->location}." : '')
+                . ($job->is_remote ? ' Remote position.' : '');
+        }
+
+        // ── Step 4: Score ──
         $prompt = "
             You are an ATS (Applicant Tracking System) and career coach.
             Analyze how well this candidate's CV matches the job.
@@ -868,12 +1003,15 @@ Data:
             Company: {$job->company_name}
             Role: {$job->role_title}
             Location: " . ($job->location ?? 'Not specified') . "
-            " . ($job->notes ? "Job notes: {$job->notes}" : '') . "
+            Remote: " . ($job->is_remote ? 'Yes' : 'No') . "
 
-            CANDIDATE CV SUMMARY:
+            JOB DESCRIPTION (from posting):
+            {$jobDescription}
+
+            CANDIDATE CV:
             {$cvSummary}
 
-            Respond ONLY with valid JSON:
+            Respond ONLY with valid JSON. No markdown. No preamble:
             {
               \"score\": 78,
               \"verdict\": \"Strong Match\",
@@ -882,12 +1020,18 @@ Data:
               \"missing_skills\": [\"skill3\", \"skill4\"],
               \"strengths\": [\"3 specific strengths for this role\"],
               \"gaps\": [\"2-3 honest gaps or concerns\"],
-              \"recommendation\": \"Apply confidently / Apply with adjustments / Consider carefully\",
-              \"cv_tips_for_this_role\": [\"specific tip 1\", \"specific tip 2\", \"specific tip 3\"]
+              \"recommendation\": \"Apply confidently\",
+              \"cv_tips_for_this_role\": [\"tip1\", \"tip2\", \"tip3\"],
+              \"job_description_source\": \"url_fetched\"
             }
 
+            For job_description_source use:
+            - \"url_fetched\" if you had real job posting content
+            - \"notes\" if from user notes
+            - \"title_only\" if only title/company available
+
             Score guide: 90-100=Perfect, 75-89=Strong, 60-74=Good, 40-59=Fair, below 40=Weak
-            Be honest. Do not inflate scores.
+            Be honest. Do not inflate scores. Use the actual job description to find specific matches.
         ";
 
         $response = Http::withHeaders([
@@ -899,34 +1043,37 @@ Data:
             'messages'   => [
                 [
                     'role'    => 'system',
-                    'content' => 'You are an honest ATS scoring system. Respond ONLY with valid JSON.',
+                    'content' => 'You are an honest ATS scoring system. Respond ONLY with valid JSON. No markdown.',
                 ],
                 ['role' => 'user', 'content' => $prompt],
             ],
         ]);
 
         $content  = $response->json('choices.0.message.content') ?? '{}';
-        // Strip any markdown fences Groq might add
         $clean    = preg_replace('/```json\s*|\s*```/', '', $content);
-        $clean    = trim($clean);
-        // Find JSON object — sometimes Groq adds text before/after
         preg_match('/\{.*\}/s', $clean, $matches);
         $jsonStr  = $matches[0] ?? '{}';
         $analysis = json_decode($jsonStr, true);
 
-        if (json_last_error() !== JSON_ERROR_NONE || !isset($analysis['score'])) {
+        if (!$analysis || !isset($analysis['score'])) {
             Log::error('ATS JSON parse failed: ' . $content);
             $analysis = [
-                'score'           => 50,
-                'verdict'         => 'Analysis incomplete',
-                'summary'         => 'Could not fully analyze. Please try again.',
-                'matching_skills' => [],
-                'missing_skills'  => [],
-                'strengths'       => [],
-                'gaps'            => [],
-                'recommendation'  => 'Try again',
-                'cv_tips_for_this_role' => [],
+                'score'                  => 0,
+                'verdict'                => 'Analysis failed',
+                'summary'                => 'Could not analyze. Please try again.',
+                'matching_skills'        => [],
+                'missing_skills'         => [],
+                'strengths'              => [],
+                'gaps'                   => [],
+                'recommendation'         => 'Try again',
+                'cv_tips_for_this_role'  => [],
+                'job_description_source' => 'error',
             ];
+        }
+
+        // Ensure source is always present (AI may omit it)
+        if (empty($analysis['job_description_source'])) {
+            $analysis['job_description_source'] = $jobDescriptionSource;
         }
 
         // Save to job application

@@ -33,6 +33,17 @@ Route::get('/', function () {
     ]);
 });
 
+Route::post('/waitlist', function (\Illuminate\Http\Request $request) {
+    $request->validate(['email' => 'required|email']);
+    \Illuminate\Support\Facades\DB::table('waitlist')->insertOrIgnore([
+        'email'      => $request->email,
+        'source'     => 'landing',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    return back()->with('waitlist_success', true);
+})->name('waitlist.join');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),

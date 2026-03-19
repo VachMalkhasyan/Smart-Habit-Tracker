@@ -1,114 +1,151 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
-import { Bot, X, Send, Minus, Maximize2, Sparkles, Loader2 } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
+import { Bot, X, Send, Minus, Sparkles } from 'lucide-vue-next'
 
-const isOpen = ref(false)
-const isMinimized = ref(false)
-const messages = ref([])
-const newMessage = ref('')
-const isLoading = ref(false)
-const conversationId = ref(localStorage.getItem('widgetConversationId'))
+// ── Constants ──
+const WIDGET_CONV_KEY = 'growthzone_widget_conversation_id'
 
-const toggleWidget = () => {
-    isOpen.value = !isOpen.value
-    if (isOpen.value) {
-        isMinimized.value = false
-        if (conversationId.value && messages.value.length === 0) {
-            loadMessages()
-        }
-    }
-}
+// ── State ──
+const isOpen         = ref(false)
+const isMinimized    = ref(false)
+const messages       = ref([])
+const newMessage     = ref('')
+const isLoading      = ref(false)
+const conversationId = ref(null)
+const unreadCount    = ref(0)
 
-const loadMessages = async () => {
-    if (!conversationId.value) return
-    
-    try {
-        const { data } = await axios.get(`/ai/conversations/${conversationId.value}`)
-        messages.value = data.messages || []
-        scrollToBottom()
-    } catch (e) {
-        console.error('Failed to load widget messages:', e)
-        // If 404, clear ID
-        if (e.response?.status === 404) {
+// ── Initialize — load existing or create new conversation ──
+const initConversation = async () => {
+    const savedId = localStorage.getItem(WIDGET_CONV_KEY)
+
+    if (savedId) {
+        try {
+            const { data } = await axios.get(`/ai/conversations/${savedId}`)
+            conversationId.value = data.id
+            // Load last 8 messages only to keep the widget lightweight
+            messages.value = (data.messages ?? []).slice(-8)
+            return
+        } catch (e) {
+            // Conversation deleted or not found — clear and fall through to create new
+            localStorage.removeItem(WIDGET_CONV_KEY)
             conversationId.value = null
-            localStorage.removeItem('widgetConversationId')
         }
+    }
+
+    // Create a fresh widget conversation
+    try {
+        const { data } = await axios.post('/ai/conversations', { title: 'Quick Chat' })
+        conversationId.value = data.id
+        localStorage.setItem(WIDGET_CONV_KEY, data.id)
+        messages.value = []
+    } catch (e) {
+        console.error('Could not create AI conversation', e)
     }
 }
 
+// ── Open widget ──
+const openWidget = async () => {
+    isOpen.value      = true
+    isMinimized.value = false
+    unreadCount.value = 0
+
+    if (!conversationId.value) {
+        await initConversation()
+    }
+    await nextTick()
+    scrollToBottom()
+}
+
+// ── Close widget ──
+const closeWidget = () => {
+    isOpen.value = false
+}
+
+// ── Toggle ──
+const toggleWidget = () => {
+    if (isMinimized.value) {
+        isMinimized.value = false
+        isOpen.value      = true
+        return
+    }
+    if (isOpen.value) {
+        closeWidget()
+    } else {
+        openWidget()
+    }
+}
+
+// ── Send message ──
 const sendMessage = async () => {
     if (!newMessage.value.trim() || isLoading.value) return
 
-    const userMessage = { 
-        id: Date.now(), 
-        role: 'user', 
-        content: newMessage.value 
+    // Ensure we have a conversation before sending
+    if (!conversationId.value) await initConversation()
+    if (!conversationId.value) return // Still null after init — abort
+
+    const userMessage = {
+        role:       'user',
+        content:    newMessage.value.trim(),
+        created_at: new Date().toISOString(),
     }
-    
+
     messages.value.push(userMessage)
-    const text = newMessage.value
+    const text   = newMessage.value.trim()
     newMessage.value = ''
-    isLoading.value = true
+    isLoading.value  = true
+
+    await nextTick()
     scrollToBottom()
 
     try {
-        // Create conversation if none exists
-        if (!conversationId.value) {
-            const { data: conv } = await axios.post('/ai/conversations', { 
-                title: 'Widget Chat' 
-            })
-            conversationId.value = conv.id
-            localStorage.setItem('widgetConversationId', conv.id)
+        const { data } = await axios.post(
+            `/ai/conversations/${conversationId.value}/chat`,
+            { message: text }
+        )
+
+        messages.value.push({
+            role:       'assistant',
+            content:    data.response ?? '⚠️ Something went wrong. Please try again.',
+            created_at: new Date().toISOString(),
+        })
+
+        // Keep only the last 8 messages displayed in the widget
+        if (messages.value.length > 8) {
+            messages.value = messages.value.slice(-8)
         }
 
-        const { data } = await axios.post(`/ai/conversations/${conversationId.value}/chat`, {
-            message: text
-        })
+        // Increment badge if the user has the widget closed
+        if (!isOpen.value) unreadCount.value++
 
-        // Handle response safely - match AiCoach/Index behavior
-        messages.value.push({
-            id: Date.now() + 1, // fallback id
-            role: 'assistant',
-            content: data.response || 'I received your message but had trouble processing my reply.',
-            created_at: new Date().toISOString()
-        })
-        
-        scrollToBottom()
     } catch (e) {
         console.error('Widget chat failed:', e)
         messages.value.push({
-            id: Date.now() + 2,
-            role: 'assistant',
-            content: 'Sorry, I encountered an error. Please try again.'
+            role:    'assistant',
+            content: '⚠️ Something went wrong. Please try again.',
         })
     } finally {
         isLoading.value = false
+        await nextTick()
+        scrollToBottom()
     }
 }
 
+// ── Scroll helper ──
 const scrollToBottom = () => {
-    nextTick(() => {
-        const viewport = document.getElementById('widget-chat-viewport')
-        if (viewport) {
-            viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
-        }
-    })
+    const el = document.getElementById('widget-chat-viewport')
+    if (el) el.scrollTop = el.scrollHeight
 }
 
-const handleToggleEvent = () => toggleWidget()
-
+// ── Lifecycle ──
 onMounted(() => {
-    window.addEventListener('toggle-ai-widget', handleToggleEvent)
-    if (conversationId.value) {
-        loadMessages()
-    }
+    // Pre-load conversation so reopening the widget is instant
+    initConversation()
+    window.addEventListener('toggle-ai-widget', toggleWidget)
 })
 
 onUnmounted(() => {
-    window.removeEventListener('toggle-ai-widget', handleToggleEvent)
+    window.removeEventListener('toggle-ai-widget', toggleWidget)
 })
 
 watch(isOpen, (val) => {
@@ -215,18 +252,25 @@ watch(isOpen, (val) => {
         </Transition>
 
         <!-- Floating Button -->
-        <button 
-            @click="isMinimized ? isMinimized = false : toggleWidget()"
+        <button
+            @click="toggleWidget"
             :class="[
-                'w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 transform',
-                isOpen ? 'bg-indigo-600 text-white rotate-0' : 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 hover:scale-110 active:scale-95 border border-indigo-50 dark:border-gray-800'
+                'relative w-14 h-14 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 transform',
+                isOpen && !isMinimized ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 hover:scale-110 active:scale-95 border border-indigo-50 dark:border-gray-800'
             ]"
         >
             <X v-if="isOpen && !isMinimized" class="w-6 h-6" />
             <Bot v-else class="w-7 h-7" />
-            
-            <!-- Notification Badge (if needed) -->
-            <span v-if="!isOpen && conversationId" class="absolute top-0 right-0 w-3 h-3 bg-indigo-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
+
+            <!-- Unread badge -->
+            <span v-if="!isOpen && unreadCount > 0"
+                class="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 border-2 border-white dark:border-gray-900 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-0.5">
+                {{ unreadCount }}
+            </span>
+            <!-- Dot indicator when conversation exists but no unread -->
+            <span v-else-if="!isOpen && conversationId"
+                class="absolute top-0 right-0 w-3 h-3 bg-indigo-500 border-2 border-white dark:border-gray-900 rounded-full">
+            </span>
         </button>
     </div>
 </template>
