@@ -260,9 +260,27 @@
                         </div>
                     </div>
 
+                    <!-- Quick URL banner — shown when no URL and no notes for better ATS accuracy -->
+                    <div v-if="!application.job_url && !application.notes"
+                        class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 text-sm">
+                        <p class="text-amber-700 dark:text-amber-300 font-medium mb-2">
+                            💡 Add the job URL or paste the job description in notes for a more accurate ATS score
+                        </p>
+                        <div class="flex gap-2">
+                            <input v-model="quickJobUrl"
+                                placeholder="https://linkedin.com/jobs/..."
+                                class="flex-1 px-3 py-1.5 text-sm border border-amber-200 dark:border-amber-700 rounded-lg bg-white dark:bg-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                            <button @click="saveJobUrl"
+                                :disabled="!quickJobUrl.trim()"
+                                class="px-3 py-1.5 bg-amber-500 text-white text-sm rounded-lg hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                                Save URL
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- ATS Score Section -->
-                    <AtsScoreCard 
-                        :application="application" 
+                    <AtsScoreCard
+                        :application="application"
                         :hasCV="$page.props.has_cv"
                         @analyze="handleAnalyze"
                     />
@@ -392,6 +410,7 @@ import { useJobStatus } from '@/composables/useJobStatus'
 import AddJobModal from '@/Components/Jobs/AddJobModal.vue'
 import CoverLetterModal from '@/Components/Jobs/CoverLetterModal.vue'
 import ResearchModal from '@/Components/Jobs/ResearchModal.vue'
+import InterviewPrepModal from '@/Components/Jobs/InterviewPrepModal.vue'
 import AtsScoreCard from '@/Components/Jobs/AtsScoreCard.vue'
 import InputLabel from '@/Components/InputLabel.vue'
 import TextInput from '@/Components/TextInput.vue'
@@ -513,6 +532,20 @@ const handleAnalyze = () => {
     router.post(route('cv.score-job', props.application.id), {}, {
         preserveScroll: true,
         onSuccess: () => toast.success('ATS scores updated!'),
+    })
+}
+
+const quickJobUrl = ref('')
+const saveJobUrl  = () => {
+    if (!quickJobUrl.value.trim()) return
+    router.patch(route('jobs.update', props.application.id), {
+        job_url: quickJobUrl.value.trim()
+    }, {
+        preserveScroll: true,
+        onSuccess: () => {
+            quickJobUrl.value = ''
+            toast.success('Job URL saved!')
+        }
     })
 }
 

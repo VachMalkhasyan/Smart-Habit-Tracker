@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { Link } from '@inertiajs/vue3'
 
 const props = defineProps({
     application: Object,
@@ -123,6 +124,23 @@ const handleAnalyze = () => {
                     :class="score >= 75 ? 'bg-green-500' : (score >= 60 ? 'bg-yellow-500' : (score >= 40 ? 'bg-orange-500' : 'bg-red-500'))"
                     :style="{ width: displayedScore + '%' }">
                 </div>
+            </div>
+
+            <!-- Job description source badge -->
+            <div class="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1 justify-center">
+                <span v-if="analysis.job_description_source === 'url_fetched'">
+                    🌐 Scored from live job posting
+                </span>
+                <span v-else-if="analysis.job_description_source === 'notes'">
+                    📝 Scored from your notes
+                </span>
+                <template v-else-if="analysis.job_description_source === 'title_only' || analysis.job_description_source === 'error' || !analysis.job_description_source">
+                    <span>⚠️ Limited data — add job URL or notes for better accuracy</span>
+                    <Link v-if="application?.id" :href="`/jobs/${application.id}`"
+                        class="text-indigo-500 underline ml-1">
+                        Add details →
+                    </Link>
+                </template>
             </div>
 
             <p class="text-sm text-gray-600 dark:text-gray-400 italic leading-relaxed text-center">
