@@ -74,6 +74,9 @@ Route::resource('categories', CategoryController::class)
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings',                [SettingsController::class, 'index'])->name('settings');
+    Route::get('/pricing', function () {
+        return \Inertia\Inertia::render('Pricing');
+    })->name('pricing');
     Route::post('/settings',               [SettingsController::class, 'update'])->name('settings.update');
     Route::delete('/settings/habits',      [SettingsController::class, 'deleteHabits'])->name('settings.deleteHabits');
     Route::delete('/settings/account',     [SettingsController::class, 'deleteAccount'])->name('settings.deleteAccount');

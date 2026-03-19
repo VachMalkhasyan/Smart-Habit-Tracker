@@ -1,7 +1,7 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import AuthLayout from '@/Components/Auth/AuthLayout.vue';
+import AuthLayout from '../../Components/Auth/AuthLayout.vue'
 import GoogleAuthButton from '@/Components/Auth/GoogleAuthButton.vue';
 
 const form = useForm({

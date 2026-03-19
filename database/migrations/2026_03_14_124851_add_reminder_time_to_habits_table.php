@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('habits', function (Blueprint $table) {
             $table->time('reminder_time')->nullable()->after('status');
             $table->integer('deadline_value')->nullable()->change();
-            $table->enum('deadline_unit', ['days', 'weeks', 'months', 'years'])->nullable()->change();
+            $table->string('deadline_unit')->nullable()->change();
         });
     }
 
@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::table('habits', function (Blueprint $table) {
             $table->dropColumn('reminder_time');
             $table->integer('deadline_value')->nullable(false)->change();
-            $table->enum('deadline_unit', ['days', 'weeks', 'months', 'years'])->nullable(false)->change();
+            $table->string('deadline_unit')->nullable()->change();
         });
     }
 };

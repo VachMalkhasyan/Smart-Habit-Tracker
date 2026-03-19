@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Carbon\Carbon;
 use App\Models\Completion;
+use App\Services\PlanService;
 
 class AnalyticsController extends Controller
 {
@@ -14,9 +15,14 @@ class AnalyticsController extends Controller
         $user  = $request->user();
         $today = Carbon::today();
 
-        // Heatmap — last year of completions
+        $daysLimit = PlanService::limit($user, 'analytics_days');
+        $startDate = $daysLimit === -1
+            ? $user->created_at->toDateString()
+            : now()->subDays($daysLimit)->toDateString();
+
+        // Heatmap — limited by plan
         $heatmap = Completion::whereIn('habit_id', $user->habits()->pluck('id'))
-            ->where('completed_at', '>=', $today->copy()->subYear())
+            ->where('completed_at', '>=', $startDate)
             ->where('is_done', true)
             ->selectRaw('completed_at, COUNT(*) as count')
             ->groupBy('completed_at')
@@ -28,6 +34,7 @@ class AnalyticsController extends Controller
 
         // Best day of week
         $dayStats = Completion::whereIn('habit_id', $user->habits()->pluck('id'))
+            ->where('completed_at', '>=', $startDate)
             ->where('is_done', true)
             ->selectRaw('DAYOFWEEK(completed_at) as day, COUNT(*) as count')
             ->groupBy('day')
@@ -52,7 +59,7 @@ class AnalyticsController extends Controller
 
         // Per habit completion rates
         $habitStats = $user->habits()
-            ->with('completions')
+            ->with(['completions' => fn($q) => $q->where('completed_at', '>=', $startDate)])
             ->get()
             ->map(function ($habit) {
                 $total = $habit->completions->count();

@@ -40,7 +40,7 @@
                         'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors duration-200 group',
                         isActive(item.href)
                             ? 'bg-indigo-50 text-indigo-600'
-                            : 'text-gray-600 hover:bg-gray-100 dark:bg-gray-700 hover:text-gray-900 dark:text-gray-100'
+                            : (item.special ? 'text-purple-600 dark:text-purple-400 font-bold hover:bg-purple-50 dark:hover:bg-purple-900/20' : 'text-gray-600 hover:bg-gray-100 dark:bg-gray-700 hover:text-gray-900 dark:text-gray-100')
                     ]">
                     <component :is="item.icon" class="w-5 h-5 shrink-0" />
                     <span v-if="!collapsed" class="text-sm font-medium flex-1">{{ item.label }}</span>
@@ -69,6 +69,9 @@
                     </div>
                 </Link>
 
+                <div v-if="!collapsed" class="px-2 mb-2 flex justify-center">
+                    <PlanBadge />
+                </div>
                 <XpBar :xp="$page.props.xp_progress" :collapsed="collapsed" />
 
 
@@ -129,6 +132,7 @@
         />
         <!-- Global AI Chat Widget -->
         <AiChatWidget v-if="!page.url.startsWith('/ai/coach')" />
+        <UpgradeModal />
     </div>
 </template>
 
@@ -150,7 +154,8 @@ import {
     Timer,
     Bot,
     Smile,
-    Briefcase
+    Briefcase,
+    Zap
 } from 'lucide-vue-next'
 import {Toaster} from "vue-sonner";
 import { useToast } from '@/composables/useToast'
@@ -163,6 +168,8 @@ import XpBar from "@/Components/XpBar.vue";
 import { useRealtime } from '@/composables/useRealtime'
 import NotificationBell from '@/Components/NotificationBell.vue'
 import AiChatWidget from '@/Components/AiChatWidget.vue'
+import PlanBadge from "@/Components/PlanBadge.vue"
+import UpgradeModal from "@/Components/UpgradeModal.vue"
 import { usePomodoroStore } from '@/stores/pomodoroStore'
 
 const props = defineProps({
@@ -202,7 +209,7 @@ const navItems = [
     { label: 'Friends', href: route('friends.index'), icon: Users },
     { label: 'Settings',    href: route('settings'),     icon: Settings },
     { label: 'Pomodoro', href: route('pomodoro'), icon: Timer },
-
+    { label: 'Upgrade Plan', href: route('pricing'), icon: Zap, special: true },
 ]
 
 const isActive = (href) => page.url.startsWith(new URL(href).pathname)

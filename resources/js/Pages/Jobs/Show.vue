@@ -163,8 +163,9 @@
                                     </div>
                                     
                                     <div class="flex flex-wrap items-center gap-2 self-stretch sm:self-auto w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 dark:border-gray-700">
-                                        <button @click="openPrep(interview)" class="flex-1 sm:flex-none justify-center btn-outline px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition flex items-center gap-1.5">
+                                        <button @click="can('ai_interview_prep') ? openPrep(interview) : upgradeStore.open('AI Interview Prep', 'pro', 'Get personalized AI-generated questions and talking points for your interview.')" class="flex-1 sm:flex-none justify-center btn-outline px-3 py-1.5 rounded-lg text-xs font-semibold border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-400 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 transition flex items-center gap-1.5">
                                             <Bot class="w-3.5 h-3.5" /> View AI Prep
+                                            <Badge v-if="!can('ai_interview_prep')" variant="outline" class="text-[8px] h-3 px-1 ml-1 leading-none border-indigo-500/30 text-indigo-400">PRO</Badge>
                                         </button>
                                         
                                         <div v-if="interview.outcome === 'pending'" class="flex gap-2 flex-1 sm:flex-none">
@@ -249,8 +250,9 @@
                                     AI prep has not been generated for this interview yet.
                                 </div>
                                 
-                                <button @click="openPrep(nextInterview)" class="w-full btn-primary py-2 px-4 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 shadow-sm">
+                                <button @click="can('ai_interview_prep') ? openPrep(nextInterview) : upgradeStore.open('AI Interview Prep', 'pro', 'Get personalized AI-generated questions and talking points for your interview.')" class="w-full btn-primary py-2 px-4 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50 rounded-lg text-sm font-bold transition flex justify-center items-center gap-2 shadow-sm">
                                     <Sparkles class="w-4 h-4" /> Full Prep Guide
+                                    <Badge v-if="!can('ai_interview_prep')" variant="outline" class="text-[9px] h-4 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
                                 </button>
                             </div>
                             <div v-else class="text-center py-4">
@@ -303,8 +305,11 @@
                         <div class="space-y-2">
                             <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><FileText class="w-4 h-4 text-gray-400"/> Cover Letter</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Generate a custom cover letter tailored to the job description.</p>
-                            <button @click="showCoverLetterModal = true" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span>Generate Cover Letter</span>
+                            <button @click="can('job_cover_letter') ? (showCoverLetterModal = true) : upgradeStore.open('AI Cover Letter', 'pro', 'Generate a professional cover letter tailored perfectly to this job description.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <span class="flex items-center gap-2">
+                                    Generate Cover Letter
+                                    <Badge v-if="!can('job_cover_letter')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
+                                </span>
                                 <ArrowRight class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1" />
                             </button>
                         </div>
@@ -312,8 +317,11 @@
                         <div class="space-y-2">
                             <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Search class="w-4 h-4 text-gray-400"/> Company Research</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Get an AI-generated briefing on the company, culture, and products.</p>
-                            <button @click="showResearchModal = true" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
-                                <span>View Research</span>
+                            <button @click="can('job_research') ? (showResearchModal = true) : upgradeStore.open('Company Research', 'pro', 'Get detailed AI research on companies to walk into interviews with full confidence.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <span class="flex items-center gap-2">
+                                    View Research
+                                    <Badge v-if="!can('job_research')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
+                                </span>
                                 <ArrowRight class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1" />
                             </button>
                         </div>
@@ -403,10 +411,14 @@ import {
     FileText, 
     Search,
     User,
-    AlertCircle
+    AlertCircle,
+    TrendingUp
 } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
 import { useJobStatus } from '@/composables/useJobStatus'
+import { usePlan } from '@/composables/usePlan'
+import { useUpgradeStore } from '@/stores/upgradeStore'
+import { Badge } from '@/components/ui/badge'
 import AddJobModal from '@/Components/Jobs/AddJobModal.vue'
 import CoverLetterModal from '@/Components/Jobs/CoverLetterModal.vue'
 import ResearchModal from '@/Components/Jobs/ResearchModal.vue'
@@ -424,6 +436,8 @@ const props = defineProps({
 
 const toast = useToast()
 const { statusConfig, priorityConfig, interviewTypeConfig } = useJobStatus()
+const { can } = usePlan()
+const upgradeStore = useUpgradeStore()
 
 const showEditModal = ref(false)
 const showCoverLetterModal = ref(false)

@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use App\Services\PlanService;
 
 class HabitController extends Controller
 {
@@ -63,6 +64,17 @@ class HabitController extends Controller
      */
     public function store(Request $request)
     {
+        $currentCount = $request->user()
+            ->habits()
+            ->where('status', 'active')
+            ->count();
+
+        if (PlanService::hasReached($request->user(), 'habits_limit', $currentCount)) {
+            return back()->with('error',
+                PlanService::upgradeMessage('habits_limit')
+            );
+        }
+
         $validated = $request->validate([
             'name'              => 'required|string|max:255',
             'description'       => 'nullable|string',

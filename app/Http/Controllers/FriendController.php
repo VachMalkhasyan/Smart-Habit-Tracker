@@ -11,12 +11,17 @@ use App\Notifications\FriendCheeredCompletion;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Services\PlanService;
 
 class FriendController extends Controller
 {
     use AuthorizesRequests;
     public function index(Request $request)
     {
+        if (!PlanService::can($request->user(), 'friends')) {
+            return back()->with('error', PlanService::upgradeMessage('friends'));
+        }
+
         $user    = $request->user();
         $friends = $user->friends();
 
@@ -53,6 +58,10 @@ class FriendController extends Controller
 
     public function search(Request $request)
     {
+        if (!PlanService::can($request->user(), 'friends')) {
+            return response()->json(['error' => PlanService::upgradeMessage('friends')], 403);
+        }
+
         $query = $request->get('q', '');
         $user  = $request->user();
 
@@ -87,6 +96,10 @@ class FriendController extends Controller
 
     public function sendRequest(Request $request, User $user)
     {
+        if (!PlanService::can($request->user(), 'friends')) {
+            return back()->with('error', PlanService::upgradeMessage('friends'));
+        }
+
         $sender = $request->user();
 
         if ($sender->id === $user->id) {
@@ -106,6 +119,10 @@ class FriendController extends Controller
 
     public function acceptRequest(Request $request, Friendship $friendship)
     {
+        if (!PlanService::can($request->user(), 'friends')) {
+            return back()->with('error', PlanService::upgradeMessage('friends'));
+        }
+
         $this->authorize('update', $friendship);
         $friendship->update(['status' => 'accepted']);
         return back()->with('success', "You are now friends with {$friendship->sender->name}!");
@@ -133,6 +150,10 @@ class FriendController extends Controller
 
     public function cheer(Request $request, Completion $completion)
     {
+        if (!PlanService::can($request->user(), 'friends')) {
+            return response()->json(['error' => PlanService::upgradeMessage('friends')], 403);
+        }
+
         $request->validate(['emoji' => 'required|string|max:10']);
 
         $cheer = Cheer::updateOrCreate(

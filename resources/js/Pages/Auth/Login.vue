@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import AuthLayout from '@/Components/Auth/AuthLayout.vue';
+import AuthLayout from '../../Components/Auth/AuthLayout.vue'
 import GoogleAuthButton from '@/Components/Auth/GoogleAuthButton.vue';
 
 defineProps({

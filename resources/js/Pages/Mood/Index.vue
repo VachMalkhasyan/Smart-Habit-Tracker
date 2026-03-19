@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { TrendingUp, TrendingDown, Minus, Flame, Calendar, Activity } from 'lucide-vue-next'
 import ApexChart from 'vue3-apexcharts'
+import UpgradePrompt from '@/Components/UpgradePrompt.vue'
 
 const props = defineProps({
   today_mood: Object,
@@ -15,7 +16,8 @@ const props = defineProps({
   mood_habit_correlation: Array,
   average_this_week: Number,
   streak: Number,
-  daily_affirmation: String
+  daily_affirmation: String,
+  correlation_locked: Boolean
 })
 
 const trend = computed(() => {
@@ -228,14 +230,25 @@ const weekDays = computed(() => {
       </Card>
 
       <!-- Section 3: Correlation -->
-      <Card>
-        <CardContent class="p-6">
-          <div v-if="mood_habit_correlation.filter(d => d.mood_score).length >= 3">
+      <Card class="relative overflow-hidden group border-gray-100 dark:border-gray-800">
+        <div v-if="correlation_locked" class="absolute inset-0 bg-gray-50/10 dark:bg-gray-950/10 backdrop-blur-[6px] z-10 flex flex-col items-center justify-center p-8 text-center transition-all duration-500">
+            <div class="p-6 rounded-3xl bg-white/90 dark:bg-gray-900/90 shadow-2xl border border-indigo-500/10 max-w-lg mx-auto transform transition-transform duration-500 hover:scale-[1.02]">
+                <UpgradePrompt 
+                    feature="Mood-Habit Correlation"
+                    message="Gain deep insights into how your emotions influence your productivity over time. Upgrade to Pro to unlock this advanced analytical tool."
+                    requiredPlan="pro"
+                    class="bg-transparent border-none shadow-none p-0"
+                />
+            </div>
+        </div>
+
+        <CardContent :class="['p-6 transition-all duration-700', correlation_locked ? 'opacity-20 grayscale pointer-events-none' : '']">
+          <div v-if="mood_habit_correlation.filter(d => d.mood_score).length >= 3 || correlation_locked">
             <ApexChart 
               type="line" 
               height="350" 
               :options="chartOptions" 
-              :series="series" 
+              :series="correlation_locked ? [{name: 'Sample', data: [3,4,2,5,3,4,4]}] : series" 
             />
           </div>
           <div v-else class="py-20 flex flex-col items-center justify-center text-center space-y-4">

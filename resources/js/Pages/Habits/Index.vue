@@ -57,6 +57,31 @@
             </div>
         </div>
 
+        <!-- Habit Limit Info -->
+        <div class="mb-8 p-5 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col md:flex-row items-center gap-8 transition-all hover:shadow-md">
+            <div class="flex-1 w-full max-w-md">
+                <LimitBar 
+                    label="Active Habits" 
+                    :current="habits.filter(h => h.status === 'active').length" 
+                    :limit="getLimit('habits_limit')" 
+                    unit="habits"
+                />
+            </div>
+            <div v-if="hasReached('habits_limit', habits.filter(h => h.status === 'active').length)" class="shrink-0 w-full md:w-auto">
+                <Button 
+                    @click="upgradeStore.open('Habits', 'pro', 'You\'ve reached the limit of active habits for your current plan.')"
+                    variant="outline" 
+                    class="w-full border-indigo-500/30 text-indigo-500 hover:bg-indigo-500/10 font-bold px-6 h-11 rounded-xl"
+                >
+                    <Sparkles class="w-4 h-4 mr-2" />
+                    Unlock Unlimited Habits
+                </Button>
+            </div>
+            <div v-else class="text-xs text-gray-400 font-medium">
+                Tip: Upgrade to <span class="text-indigo-400">Pro</span> for up to 20 habits.
+            </div>
+        </div>
+
         <!-- Habits Grid -->
         <draggable
             v-if="filteredHabits.length > 0"
@@ -205,9 +230,15 @@ import {
 } from '@/components/ui/dialog'
 import {
     Plus, Search, Flame, Calendar, MoreVertical,
-    Eye, Pencil, Trash2, ListChecks, GripVertical
+    Eye, Pencil, Trash2, ListChecks, GripVertical, Sparkles
 } from 'lucide-vue-next'
 import ExportButton from '@/Components/ExportButton.vue'
+import LimitBar from '@/Components/LimitBar.vue'
+import { usePlan } from '@/composables/usePlan'
+import { useUpgradeStore } from '@/stores/upgradeStore'
+
+const { getLimit, hasReached } = usePlan()
+const upgradeStore = useUpgradeStore()
 
 const props = defineProps({
     habits:     Array,

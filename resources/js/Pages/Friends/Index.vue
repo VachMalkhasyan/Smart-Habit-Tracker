@@ -1,7 +1,36 @@
 <template>
     <AppLayout title="Friends" subtitle="Stay accountable with your friends">
+        <!-- Locked State for Free Users -->
+        <div v-if="!can('networking')" class="max-w-5xl mx-auto py-8 space-y-12">
+            <UpgradePrompt 
+                feature="Friends & Social Accountability"
+                message="Connect with friends, track each other's streaks, and send cheers to stay motivated together. Join the community by upgrading to Pro."
+                requiredPlan="pro"
+            />
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <!-- Blurred Preview of Friends Dashboard -->
+            <div class="relative rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 opacity-30 grayscale pointer-events-none select-none group">
+                <div class="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white dark:via-gray-900/50 dark:to-gray-900 z-10"></div>
+                <div class="p-8 filter blur-[6px]">
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-2 space-y-6">
+                            <div class="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                            <div class="h-64 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                        </div>
+                        <div class="h-96 bg-gray-100 dark:bg-gray-800 rounded-2xl"></div>
+                    </div>
+                </div>
+                <div class="absolute inset-x-0 bottom-20 flex flex-col items-center justify-center z-20">
+                    <div class="p-6 rounded-2xl bg-white/90 dark:bg-gray-900/90 shadow-2xl border border-indigo-500/20 text-center scale-110">
+                        <Users class="w-12 h-12 text-indigo-500 mx-auto mb-4" />
+                        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Social Features are Premium</h3>
+                        <p class="text-sm text-gray-500 max-w-xs mx-auto">Upgrade to Pro to join 1,200+ users living their best lives together.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
             <!-- Left: Friend Activity -->
             <div class="xl:col-span-2 space-y-5">
@@ -229,6 +258,10 @@ import {
     Flame, Check, X
 } from 'lucide-vue-next'
 import { useRealtime } from '@/composables/useRealtime'
+import { usePlan } from '@/composables/usePlan'
+import UpgradePrompt from '@/Components/UpgradePrompt.vue'
+
+const { can } = usePlan()
 
 
 

@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\PlanService;
 
 class ExportController extends Controller
 {
     public function csv(Request $request)
     {
+        if (!PlanService::can($request->user(), 'export')) {
+            return back()->with('error', PlanService::upgradeMessage('export'));
+        }
+
         $user   = $request->user();
         $type   = $request->get('type', 'habits');
 
@@ -23,6 +28,10 @@ class ExportController extends Controller
 
     public function pdf(Request $request)
     {
+        if (!PlanService::can($request->user(), 'export')) {
+            return back()->with('error', PlanService::upgradeMessage('export'));
+        }
+
         $user = $request->user();
         $type = $request->get('type', 'habits');
 

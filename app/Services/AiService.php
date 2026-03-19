@@ -233,59 +233,59 @@ INSTRUCTIONS — FOLLOW STRICTLY
         }
 
         // 4. Call API
-        // ============================================
-        // PRODUCTION: Claude Haiku (Anthropic)
-        // Uncomment this and comment out Groq block when going live
-        // ============================================
-        // $response = Http::withHeaders([
-        //     'x-api-key'         => config('services.anthropic.key'),
-        //     'anthropic-version' => '2023-06-01',
-        //     'content-type'      => 'application/json',
-        // ])->post('https://api.anthropic.com/v1/messages', [
-        //     'model'      => 'claude-haiku-4-5-20251001',
-        //     'max_tokens' => 1024,
-        //     'system'     => $this->buildSystemPrompt($user),
-        //     'messages'   => $messages,
-        // ]);
-        // 
-        // if (!$response->successful()) {
-        //     \Log::error('Anthropic API Error', ['response' => $response->json()]);
-        //     return "I'm having trouble connecting to my brain right now. Please try again later.";
-        // }
-        // 
-        // $content     = $response->json('content.0.text');
-        // $tokensUsed  = $response->json('usage.input_tokens', 0) + $response->json('usage.output_tokens', 0);
-        // ============================================
+        $model = match(\App\Services\PlanService::aiModel($user)) {
+            'claude-haiku'  => 'claude-haiku-4-5-20251001',
+            'claude-sonnet' => 'claude-sonnet-4-6',
+            default         => null, // groq
+        };
 
-        // ============================================
-        // DEVELOPMENT: Groq (free tier)
-        // Comment this out and uncomment Anthropic block for production
-        // ============================================
-        $groqMessages = $messages; // Groq uses same format as OpenAI
+        if ($model) {
+            // Use Claude (Anthropic)
+            $response = Http::withHeaders([
+                'x-api-key'         => config('services.anthropic.key'),
+                'anthropic-version' => '2023-06-01',
+                'content-type'      => 'application/json',
+            ])->post('https://api.anthropic.com/v1/messages', [
+                'model'      => $model,
+                'max_tokens' => 1024,
+                'system'     => $this->buildSystemPrompt($user),
+                'messages'   => $messages,
+            ]);
 
-        // Groq doesn't have a separate system field — prepend as system message
-        array_unshift($groqMessages, [
-            'role'    => 'system',
-            'content' => $this->buildSystemPrompt($user),
-        ]);
+            if (!$response->successful()) {
+                \Log::error('Anthropic API Error', ['response' => $response->json()]);
+                return "I'm having trouble connecting to my brain right now. Please try again later.";
+            }
 
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . config('services.groq.key'),
-            'Content-Type'  => 'application/json',
-        ])->post('https://api.groq.com/openai/v1/chat/completions', [
-            'model'      => 'llama-3.3-70b-versatile',
-            'max_tokens' => 1024,
-            'messages'   => $groqMessages,
-        ]);
+            $content     = $response->json('content.0.text');
+            $tokensUsed  = (int)$response->json('usage.input_tokens', 0) + (int)$response->json('usage.output_tokens', 0);
+        } else {
+            // Use Groq (free plan)
+            $groqMessages = $messages; // Groq uses same format as OpenAI
 
-        if (!$response->successful()) {
-            \Log::error('Groq API Error', ['response' => $response->json()]);
-            return "I'm having trouble connecting to my brain right now. Please try again later.";
+            // Groq doesn't have a separate system field — prepend as system message
+            array_unshift($groqMessages, [
+                'role'    => 'system',
+                'content' => $this->buildSystemPrompt($user),
+            ]);
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.groq.key'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model'      => 'llama-3.3-70b-versatile',
+                'max_tokens' => 1024,
+                'messages'   => $groqMessages,
+            ]);
+
+            if (!$response->successful()) {
+                \Log::error('Groq API Error', ['response' => $response->json()]);
+                return "I'm having trouble connecting to my brain right now. Please try again later.";
+            }
+
+            $content    = $response->json('choices.0.message.content');
+            $tokensUsed = (int)$response->json('usage.prompt_tokens', 0) + (int)$response->json('usage.completion_tokens', 0);
         }
-
-        $content    = $response->json('choices.0.message.content');
-        $tokensUsed = $response->json('usage.prompt_tokens', 0) + $response->json('usage.completion_tokens', 0);
-        // ============================================
 
         // 5. Save assistant response
         $conversation->messages()->create([
