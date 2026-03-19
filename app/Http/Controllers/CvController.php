@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\UserCv;
 use App\Models\JobApplication;
 use App\Services\AiService;
+use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -23,6 +24,12 @@ class CvController extends Controller
     // Upload PDF/Word file
     public function upload(Request $request)
     {
+        if (!PlanService::can($request->user(), 'cv_upload')) {
+            return back()->with('error',
+                PlanService::upgradeMessage('cv_upload')
+            );
+        }
+
         $request->validate([
             'file'  => 'required|file|mimes:pdf,doc,docx|max:5120', // 5MB max
             'title' => 'nullable|string|max:100',
@@ -46,6 +53,12 @@ class CvController extends Controller
     // Paste raw text
     public function storeText(Request $request)
     {
+        if (!PlanService::can($request->user(), 'cv_upload')) {
+            return back()->with('error',
+                PlanService::upgradeMessage('cv_upload')
+            );
+        }
+
         $request->validate([
             'raw_text' => 'required|string|min:100|max:20000',
             'title'    => 'nullable|string|max:100',
@@ -96,6 +109,14 @@ class CvController extends Controller
     // ATS score for specific job
     public function scoreJob(Request $request, JobApplication $jobApplication)
     {
+        if (!PlanService::can($request->user(), 'ats_scoring')) {
+            return response()->json([
+                'error'         => PlanService::upgradeMessage('ats_scoring'),
+                'upgrade'       => true,
+                'required_plan' => 'max',
+            ], 403);
+        }
+
         abort_if($jobApplication->user_id !== $request->user()->id, 403);
 
         $cv = $request->user()->activeCV();

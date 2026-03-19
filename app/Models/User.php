@@ -47,6 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'affirmation_date',
         'last_weekly_summary',
         'last_weekly_summary_date',
+        'plan',
     ];
 
     /**
@@ -216,9 +217,14 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * AI Conversations for this user
      */
-    public function aiConversations(): HasMany
+    public function aiConversations(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(AiConversation::class);
+    }
+
+    public function aiMessages(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    {
+        return $this->hasManyThrough(AiMessage::class, AiConversation::class, 'user_id', 'conversation_id');
     }
 
     public function jobApplications(): HasMany
@@ -255,6 +261,46 @@ class User extends Authenticatable implements MustVerifyEmail
             'rejected'     => $rejected,
             'this_week'    => $thisWeek,
         ];
+    }
+
+    public function isPro(): bool
+    {
+        return in_array($this->plan, ['pro', 'max']);
+    }
+
+    public function isMax(): bool
+    {
+        return $this->plan === 'max';
+    }
+
+    public function isFree(): bool
+    {
+        return $this->plan === 'free';
+    }
+
+    public function planLimits(): array
+    {
+        return config('plans.' . $this->plan, config('plans.free'));
+    }
+
+    public function canUseFeature(string $feature): bool
+    {
+        return (bool) ($this->planLimits()[$feature] ?? false);
+    }
+
+    public function hasReachedLimit(string $feature, int $current): bool
+    {
+        $limit = $this->planLimits()[$feature] ?? 0;
+        if ($limit === -1) return false;
+        return $current >= $limit;
+    }
+    /**
+     * Override default verification notification to use our custom code-based system.
+     * The code is already sent in the CreateNewUser action or resend method.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        // No-panel, custom logic handles this.
     }
 }
 

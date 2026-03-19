@@ -63,6 +63,19 @@ class HandleInertiaRequests extends Middleware
                 ->where('outcome', 'pending')
                 ->count() ?? 0,
             'has_cv' => $request->user()?->activeCV() !== null,
+            'plan'        => $request->user()?->plan ?? 'free',
+            'plan_limits' => $request->user()
+                ? \App\Services\PlanService::limits($request->user())
+                : config('plans.free'),
+            'plan_name'   => $request->user()
+                ? config('plans.' . $request->user()->plan . '.name', 'Free')
+                : 'Free',
+            'ai_messages_today' => $request->user()
+                ? $request->user()->aiMessages()->whereDate('ai_messages.created_at', today())->count()
+                : 0,
+            'habits_active_count' => $request->user()
+                ? $request->user()->habits()->where('status', 'active')->count()
+                : 0,
         ]);
     }
 }

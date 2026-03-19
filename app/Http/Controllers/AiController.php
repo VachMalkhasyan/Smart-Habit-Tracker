@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AiConversation;
 use App\Services\AiService;
+use App\Services\PlanService;
+use App\Models\AiMessage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -73,6 +75,25 @@ class AiController extends Controller
     {
         if ($conversation->user_id !== $request->user()->id) {
             abort(403);
+        }
+
+        $user = $request->user();
+
+        // Check daily AI message limit
+        $todayCount = AiMessage::whereHas('conversation',
+                fn($q) => $q->where('user_id', $user->id)
+            )
+            ->where('role', 'user')
+            ->whereDate('created_at', today())
+            ->count();
+
+        if (PlanService::hasReached($user, 'ai_messages_per_day', $todayCount)) {
+            return response()->json([
+                'error'         => PlanService::upgradeMessage('ai_messages_per_day'),
+                'upgrade'       => true,
+                'required_plan' => 'pro',
+                'limit_reached' => 'ai_messages_per_day',
+            ], 403);
         }
 
         $request->validate([

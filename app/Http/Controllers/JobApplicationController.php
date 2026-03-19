@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\JobApplication;
 use App\Services\AiService;
 use App\Services\XpService;
+use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -12,6 +13,15 @@ class JobApplicationController extends Controller
 {
     public function index(Request $request)
     {
+        // Gate entire job tracker for free users
+        if (!PlanService::can($request->user(), 'job_tracker')) {
+            return Inertia::render('Jobs/Locked', [
+                'feature'       => 'Job Tracker',
+                'required_plan' => 'pro',
+                'message'       => PlanService::upgradeMessage('job_tracker'),
+            ]);
+        }
+
         $user = $request->user();
 
         $applications = $user->jobApplications()
@@ -41,6 +51,13 @@ class JobApplicationController extends Controller
 
     public function store(Request $request)
     {
+        $current = $request->user()->jobApplications()->count();
+        if (PlanService::hasReached($request->user(), 'job_apps_limit', $current)) {
+            return back()->with('error',
+                PlanService::upgradeMessage('job_apps_limit')
+            );
+        }
+
         $data = $request->validate([
             'company_name' => 'required|string|max:255',
             'role_title'   => 'required|string|max:255',
@@ -153,6 +170,14 @@ class JobApplicationController extends Controller
     // AI endpoints
     public function generateCoverLetter(Request $request, JobApplication $jobApplication)
     {
+        if (!PlanService::can($request->user(), 'cover_letter')) {
+            return response()->json([
+                'error'         => PlanService::upgradeMessage('cover_letter'),
+                'upgrade'       => true,
+                'required_plan' => 'pro',
+            ], 403);
+        }
+
         $this->authorizeApplication($jobApplication, $request->user());
 
         $request->validate([
@@ -170,6 +195,14 @@ class JobApplicationController extends Controller
 
     public function companyResearch(Request $request, JobApplication $jobApplication)
     {
+        if (!PlanService::can($request->user(), 'company_research')) {
+            return response()->json([
+                'error'         => PlanService::upgradeMessage('company_research'),
+                'upgrade'       => true,
+                'required_plan' => 'pro',
+            ], 403);
+        }
+
         $this->authorizeApplication($jobApplication, $request->user());
 
         $research = app(AiService::class)->generateCompanyResearch(

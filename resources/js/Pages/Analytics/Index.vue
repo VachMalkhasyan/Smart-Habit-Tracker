@@ -13,7 +13,30 @@
             />
         </div>
 
-        <!-- Mood Summary Row -->
+        <!-- History Limit Indicator -->
+        <div class="mb-8 p-4 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:bg-indigo-500/10">
+            <div class="flex items-center gap-4 text-left">
+                <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+                    <CalendarCheck class="w-5 h-5" />
+                </div>
+                <div>
+                    <h4 class="font-bold text-white tracking-tight">Data History: Last {{ getLimit('analytics_days') }} Days</h4>
+                    <p class="text-xs text-indigo-300/70 font-medium">Enjoying the {{ plan.toUpperCase() }} tier. {{ plan === 'free' ? 'Upgrade to Pro for 30 days of insights.' : (plan === 'pro' ? 'Upgrade to Max for 90 days of deep history.' : 'You have the ultimate view!') }}</p>
+                </div>
+            </div>
+            <Button 
+                v-if="plan !== 'max'"
+                @click="upgradeStore.open('Detailed Analytics', plan === 'free' ? 'pro' : 'max', 'Unlock up to 90 days of detailed performance history.')"
+                variant="outline" 
+                class="w-full sm:w-auto border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/20 font-bold px-6 rounded-xl h-10 shadow-lg shadow-indigo-500/5"
+            >
+                <TrendingUp class="w-4 h-4 mr-2" />
+                Extend History
+            </Button>
+            <div v-else class="hidden sm:block">
+                <Badge variant="outline" class="border-purple-500/30 text-purple-400 bg-purple-500/5 px-3 py-1">Max History Unlocked</Badge>
+            </div>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
             <div class="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 rounded-2xl p-4 flex items-center gap-4">
                 <div class="text-3xl">😄</div>
@@ -222,7 +245,12 @@ import { Flame, CalendarCheck, Award, TrendingUp, Activity } from 'lucide-vue-ne
 import axios from 'axios'
 import { useRealtime } from '@/composables/useRealtime'
 import { useChartTheme } from '@/composables/useChartTheme'
+import { usePlan } from '@/composables/usePlan'
+import { useUpgradeStore } from '@/stores/upgradeStore'
 import dayjs from 'dayjs'
+
+const { getLimit, plan } = usePlan()
+const upgradeStore = useUpgradeStore()
 
 const props = defineProps({
     heatmap:           Object,

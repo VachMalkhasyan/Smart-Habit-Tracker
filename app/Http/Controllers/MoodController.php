@@ -5,6 +5,7 @@ use App\Models\MoodLog;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Services\PlanService;
 
 class MoodController extends Controller
 {
@@ -25,7 +26,10 @@ class MoodController extends Controller
                 ->whereMonth('logged_date', now()->month)
                 ->orderBy('logged_date')
                 ->get(),
-            'mood_habit_correlation' => $this->getMoodHabitCorrelation($user),
+            'mood_habit_correlation' => PlanService::can($user, 'mood_correlation')
+                ? $this->getMoodHabitCorrelation($user)
+                : [],
+            'correlation_locked' => !PlanService::can($user, 'mood_correlation'),
             'average_this_week'      => $user->weeklyMoodAverage(),
             'streak'                 => $user->getMoodStreak(),
         ]);

@@ -174,11 +174,14 @@ const sendMessage = async () => {
         
         // Update token stat locally
         if (data.tokens_used && activeConversation.value) {
-            activeConversation.value.tokens_used += data.tokens_used
-            const idx = conversations.value.findIndex(c => c.id === activeConversation.value.id)
             if (idx !== -1) conversations.value[idx].tokens_used += data.tokens_used
         }
     } catch (e) {
+        if (e.response?.status === 403 && e.response?.data?.upgrade) {
+            upgradeStore.open('AI Coach', e.response.data.required_plan, e.response.data.error);
+            messages.value.pop();
+            return;
+        }
         messages.value.push({
             id: uuidv4(),
             role: 'assistant',
@@ -208,6 +211,13 @@ const handleKeydown = (e) => {
         sendMessage()
     }
 }
+
+import { usePlan } from '@/composables/usePlan'
+import { useUpgradeStore } from '@/stores/upgradeStore'
+import LimitBar from '@/Components/LimitBar.vue'
+
+const { getLimit, hasReached } = usePlan()
+const upgradeStore = useUpgradeStore()
 
 onMounted(() => {
     fetchConversations()
@@ -273,10 +283,16 @@ onMounted(() => {
                 </div>
 
                 <!-- Sidebar Footer -->
-                <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80">
-                    <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-2">
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/80 space-y-4">
+                    <LimitBar 
+                        label="Daily Messages" 
+                        :current="$page.props.ai_messages_today" 
+                        :limit="getLimit('ai_messages_per_day')" 
+                        unit="msgs"
+                    />
+                    <div class="flex items-center text-[10px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md p-2">
                         <Battery class="w-4 h-4 mr-2 flex-shrink-0 text-emerald-500" />
-                        <span class="truncate">{{ totalTokensUsing.toLocaleString() }} tokens used total</span>
+                        <span class="truncate">{{ totalTokensUsing.toLocaleString() }} tokens total</span>
                     </div>
                 </div>
             </aside>
