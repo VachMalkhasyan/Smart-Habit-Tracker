@@ -2,12 +2,7 @@
 
 // ============================================
 // AI SERVICE
-// Current mode: DEVELOPMENT (Groq - free)
-// To switch to production (Claude Haiku):
-//   1. Add ANTHROPIC_API_KEY to .env
-//   2. In each method, comment out the Groq block
-//   3. Uncomment the Claude Haiku block
-//   4. Update the comment at top of this file
+// Provider: Groq (Llama 3.3 / 3.1)
 // ============================================
 
 namespace App\Services;
@@ -98,108 +93,70 @@ class AiService
 
         // ── ANALYTICS — weak days ──
         $weakDays = '';
-        try {
-            $last30 = \App\Models\Completion::where('user_id', $user->id)
-                ->where('is_done', true)
-                ->whereBetween('completed_at', [
-                    now()->subDays(30)->toDateString(),
-                    $today,
-                ])
-                ->selectRaw('DAYNAME(completed_at) as day_name, COUNT(*) as count')
-                ->groupBy('day_name')
-                ->orderBy('count')
-                ->take(2)
-                ->pluck('count', 'day_name');
-
-            $weakDays = $last30->map(fn($c, $d) => (string)$d . ': ' . (string)$c . ' completions')->implode(', ');
-        } catch (\Exception $e) {
-            // Analytics optional — don't break the prompt
+        $weakEntries = $user->completions()
+            ->where('is_done', '=', false)
+            ->where('completed_at', '>=', now()->subDays(14))
+            ->get()
+            ->groupBy(fn($c) => \Carbon\Carbon::parse($c->completed_at)->format('l'))
+            ->map->count()
+            ->sortDesc();
+        
+        if ($weakEntries->isNotEmpty()) {
+            $weakDays = "Historically, you struggle most on " . $weakEntries->keys()->take(2)->implode(' and ') . ".";
         }
 
-        // ── CV ──
-        $cvContext = '';
-        $activeCV  = $user->activeCV();
-        if ($activeCV?->parsed_data) {
-            $parsed    = $activeCV->parsed_data;
-            $cvContext = "
-CV / BACKGROUND:
-Skills: " . implode(', ', $parsed['skills'] ?? []) . "
-Experience: " . ($parsed['years_experience'] ?? '?') . " years
-Recent roles: " . implode(', ', array_slice($parsed['roles'] ?? [], 0, 3)) . "
-Education: " . ($parsed['education'] ?? 'Not specified');
+        // ── JOB TRACKER (If active) ──
+        $jobContext = "";
+        if ($user->plan !== 'free') {
+            $stats = $user->jobSearchStats();
+            $jobContext = "\n── JOB SEARCH ──\n" .
+                "Status: {$stats['applied']} applied, {$stats['interviewing']} interviewing, {$stats['offers']} offers.\n";
+            
+            $nextJob = $user->jobApplications()
+                ->where('status', '=', 'wishlist')
+                ->where('priority', '=', 1)
+                ->first();
+            if ($nextJob) {
+                $jobContext .= "High Priority Target: {$nextJob->role_title} at {$nextJob->company_name}.\n";
+            }
         }
 
-        // ── JOB SEARCH ──
-        $jobContext = $this->generateJobSearchSummary($user);
-
-        // ── DIARY ──
-        $diaryContext = 'No diary entries yet';
-
-        // ── BUILD PROMPT ──
         return "
-You are a personal growth coach and life assistant for {$user->name}.
-Today is " . now()->format('l, F j Y') . " — " . now()->format('g:i A') . ".
+            You are GrowthZone AI, a high-performance habit coach and life strategist.
+            Tone: Encouraging, data-driven, concise, and slightly competitive.
+            Current User: {$user->name}
+            Level: {$user->level} ({$levelTitle}) | XP: {$user->xp} ({$xpProgress['percent']}% to next level)
 
-═══════════════════════════════
-PROFILE
-═══════════════════════════════
-Name: {$user->name}
-Level: {$user->level} ({$levelTitle})
-XP: {$user->xp} total | {$xpProgress['progress_xp']}/{$xpProgress['needed_xp']} to Level {$xpProgress['next_level']}
-Member since: " . $user->created_at->format('M Y') . "
+            ── TODAY'S STATS ({$today}) ──
+            Active Habits: {$totalHabits}
+            Completed: {$completedToday} | Pending: {$pendingToday}
+            " . ($allDoneToday ? "🎉 ALL HABITS COMPLETED TODAY!" : "") . "
 
-═══════════════════════════════
-TODAY'S HABITS — LIVE STATUS
-═══════════════════════════════
-Total active habits: {$totalHabits}
-Completed today: {$completedToday}/{$totalHabits}
-Status: " . ($allDoneToday ? '🎯 ALL DONE — incredible day!' : "⏳ {$pendingToday} still pending") . "
+            ── HABITS STATUS ──
+            {$habitsContext}
 
-{$habitsContext}
+            ── MOOD LOGS ──
+            {$moodContext}
+            Weekly Trend: {$weeklyMoods}
 
-═══════════════════════════════
-STREAKS
-═══════════════════════════════
-Top streaks: " . ($topStreaks ?: 'None yet') . "
-At risk today: " . ($streaksAtRisk ?: 'None — all covered!') . "
-Weak days (last 30d): " . ($weakDays ?: 'Not enough data') . "
+            ── STREAK INSIGHTS ──
+            Winning at: {$topStreaks}
+            At Risk: " . ($streaksAtRisk ?: 'None') . "
+            {$weakDays}
+            {$jobContext}
 
-═══════════════════════════════
-MOOD
-═══════════════════════════════
-Today: {$moodContext}
-This week: " . ($weeklyMoods ?: 'No mood logged this week') . "
-
-═══════════════════════════════
-JOB SEARCH
-═══════════════════════════════
-{$jobContext}
-
-{$cvContext}
-
-═══════════════════════════════
-DIARY
-═══════════════════════════════
-{$diaryContext}
-
-═══════════════════════════════
-INSTRUCTIONS — FOLLOW STRICTLY
-═══════════════════════════════
-- ALWAYS use the live data above — never assume or guess
-- If habits show ✅ Done — do NOT tell user to complete them
-- If all habits are done — CELEBRATE, don't remind
-- Reference REAL habit names, REAL streak numbers, REAL mood
-- Never say 'I don't have access to your data' — you do, it's above
-- Keep responses under 120 words unless detail is requested
-- Sound like a warm, knowledgeable friend — never robotic
-- End with ONE specific actionable suggestion based on real data
-- If streaks are at risk — mention them specifically by name
-- If mood is low — acknowledge it with empathy first
-";
+            ── GUIDELINES ──
+            1. Keep responses under 150 words.
+            2. Reference specific habits or mood entries.
+            3. Use the user's level/XP to motivate them (e.g. 'Only 20% more for Level 5!').
+            4. If they finished everything today, celebrate it! 
+            5. Provide actionable, micro-advice.
+            6. You are talking to them in a chat interface. Be conversational but focused.
+        ";
     }
 
     /**
-     * Main method. Saves user message, checks summary, sends to Claude, saves response.
+     * Main method. Saves user message, checks summary, sends to Groq, saves response.
      */
     public function chat(User $user, AiConversation $conversation, string $userMessage): string
     {
@@ -232,60 +189,31 @@ INSTRUCTIONS — FOLLOW STRICTLY
             $messages[] = ['role' => $msg->role, 'content' => $msg->content];
         }
 
-        // 4. Call API
-        $model = match(\App\Services\PlanService::aiModel($user)) {
-            'claude-haiku'  => 'claude-haiku-4-5-20251001',
-            'claude-sonnet' => 'claude-sonnet-4-6',
-            default         => null, // groq
-        };
+        // 4. Call API (Always use Groq)
+        $groqMessages = $messages; 
 
-        if ($model) {
-            // Use Claude (Anthropic)
-            $response = Http::withHeaders([
-                'x-api-key'         => config('services.anthropic.key'),
-                'anthropic-version' => '2023-06-01',
-                'content-type'      => 'application/json',
-            ])->post('https://api.anthropic.com/v1/messages', [
-                'model'      => $model,
-                'max_tokens' => 1024,
-                'system'     => $this->buildSystemPrompt($user),
-                'messages'   => $messages,
-            ]);
+        // Groq doesn't have a separate system field — prepend as system message
+        array_unshift($groqMessages, [
+            'role'    => 'system',
+            'content' => $this->buildSystemPrompt($user),
+        ]);
 
-            if (!$response->successful()) {
-                \Log::error('Anthropic API Error', ['response' => $response->json()]);
-                return "I'm having trouble connecting to my brain right now. Please try again later.";
-            }
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'      => 'llama-3.3-70b-versatile',
+            'max_tokens' => 1024,
+            'messages'   => $groqMessages,
+        ]);
 
-            $content     = $response->json('content.0.text');
-            $tokensUsed  = (int)$response->json('usage.input_tokens', 0) + (int)$response->json('usage.output_tokens', 0);
-        } else {
-            // Use Groq (free plan)
-            $groqMessages = $messages; // Groq uses same format as OpenAI
-
-            // Groq doesn't have a separate system field — prepend as system message
-            array_unshift($groqMessages, [
-                'role'    => 'system',
-                'content' => $this->buildSystemPrompt($user),
-            ]);
-
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . config('services.groq.key'),
-                'Content-Type'  => 'application/json',
-            ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model'      => 'llama-3.3-70b-versatile',
-                'max_tokens' => 1024,
-                'messages'   => $groqMessages,
-            ]);
-
-            if (!$response->successful()) {
-                \Log::error('Groq API Error', ['response' => $response->json()]);
-                return "I'm having trouble connecting to my brain right now. Please try again later.";
-            }
-
-            $content    = $response->json('choices.0.message.content');
-            $tokensUsed = (int)$response->json('usage.prompt_tokens', 0) + (int)$response->json('usage.completion_tokens', 0);
+        if (!$response->successful()) {
+            \Log::error('Groq API Error', ['response' => $response->json()]);
+            return "I'm having trouble connecting to my brain right now. Please try again later.";
         }
+
+        $content    = $response->json('choices.0.message.content');
+        $tokensUsed = (int)$response->json('usage.prompt_tokens', 0) + (int)$response->json('usage.completion_tokens', 0);
 
         // 5. Save assistant response
         $conversation->messages()->create([
@@ -298,7 +226,6 @@ INSTRUCTIONS — FOLLOW STRICTLY
         $conversation->increment('tokens_used', $tokensUsed);
         
         $user->increment('xp', 2);
-        // We could also call XpService->addXp but we'll do raw increment for simple engagement
 
         return $content;
     }
@@ -315,32 +242,6 @@ INSTRUCTIONS — FOLLOW STRICTLY
 
         $formattedLog = $messagesToSummarize->map(fn($m) => ucfirst($m->role) . ': ' . $m->content)->implode("\n\n");
 
-        // ============================================
-        // PRODUCTION: Claude Haiku (Anthropic)
-        // ============================================
-        // $response = Http::withHeaders([
-        //     'x-api-key'         => config('services.anthropic.key'),
-        //     'anthropic-version' => '2023-06-01',
-        //     'content-type'      => 'application/json',
-        // ])->post('https://api.anthropic.com/v1/messages', [
-        //     'model'      => 'claude-haiku-4-5-20251001',
-        //     'max_tokens' => 500,
-        //     'messages'   => [
-        //         [
-        //             'role'    => 'user',
-        //             'content' => "Summarize this conversation in 4-5 sentences. Keep:\n- Key questions the user asked\n- Advice that was given\n- Any habits or goals mentioned\n- User's current concerns or focus areas\n\nConversation:\n" . $formattedLog
-        //         ]
-        //     ],
-        // ]);
-        // 
-        // if ($response->successful()) {
-        //     $summary = $response->json('content.0.text');
-        //     $tokensUsed = $response->json('usage.input_tokens', 0) + $response->json('usage.output_tokens', 0);
-        // ============================================
-
-        // ============================================
-        // DEVELOPMENT: Groq (free tier)
-        // ============================================
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -356,45 +257,42 @@ INSTRUCTIONS — FOLLOW STRICTLY
         ]);
 
         if ($response->successful()) {
-            $summary    = $response->json('choices.0.message.content');
-            $tokensUsed = $response->json('usage.prompt_tokens', 0) + $response->json('usage.completion_tokens', 0);
-        // ============================================
+            $summary = $response->json('choices.0.message.content');
+            $tokensUsed = (int)$response->json('usage.prompt_tokens', 0) + (int)$response->json('usage.completion_tokens', 0);
             
-            // Combine with existing summary if it exists
-            if ($conversation->summary) {
-                // Summarize the summary + new messages to keep it dense, but for simplicity:
-                $summary = $conversation->summary . "\n" . $summary; 
-            }
-
-            $conversation->update(['summary' => $summary]);
-            $conversation->increment('tokens_used', $tokensUsed);
-
-            // Delete summarized messages
-            $conversation->messages()->whereIn('id', $messagesToSummarize->pluck('id'))->delete();
+            $conversation->update([
+                'summary' => $summary,
+                'tokens_used' => $conversation->tokens_used + $tokensUsed
+            ]);
+            
+            // Delete old messages that were summarized
+            $messagesToSummarize->each->delete();
         }
     }
 
     /**
-     * Generate daily affirmation based on mood and habit performance
+     * Generate a personalized affirmation (Home dashboard)
      */
     public function generateDailyAffirmation(User $user, bool $forceRegenerate = false): string
     {
-        // Skip if already generated today (unless forced)
-        if (!$forceRegenerate
-            && $user->affirmation_date?->isToday()
-            && $user->daily_affirmation) {
-            return $user->daily_affirmation;
+        $today = today();
+        
+        // Cache for the day unless forced
+        if (!$forceRegenerate && $user->affirmation_date?->setHour(0)->setMinute(0)->setSecond(0)->equalTo($today)) {
+            return $user->daily_affirmation ?? "You're doing great, {$user->name}!";
         }
 
-        $mood         = $user->todaysMood();
-        $moodContext  = $mood
-            ? "Today's mood: {$mood->emoji} {$mood->label} ({$mood->score}/5)"
-              . ($mood->note ? ", note: \"{$mood->note}\"" : '')
-            : 'No mood logged today yet';
+        // Fresh data context
+        $moodContext = \App\Models\MoodLog::where('user_id', $user->id)
+            ->whereDate('logged_date', $today)
+            ->first()
+            ? "Mood: " . \App\Models\MoodLog::where('user_id', $user->id)
+                ->whereDate('logged_date', $today)
+                ->first()->label
+            : "Mood: not logged yet";
 
         $streakContext = $user->habits()
             ->where('status', 'active')
-            ->where('current_streak', '>', 0)
             ->orderByDesc('current_streak')
             ->first();
 
@@ -405,7 +303,7 @@ INSTRUCTIONS — FOLLOW STRICTLY
 
         $totalHabits = $user->habits()->where('status', 'active')->count();
 
-        // DEVELOPMENT: Groq
+        // Always use Groq
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -465,28 +363,6 @@ Respond ONLY with a valid JSON array matching this exact schema, do not include 
   }
 ]";
 
-        // ============================================
-        // PRODUCTION: Claude Haiku (Anthropic)
-        // ============================================
-        // $response = Http::withHeaders([
-        //     'x-api-key'         => config('services.anthropic.key'),
-        //     'anthropic-version' => '2023-06-01',
-        //     'content-type'      => 'application/json',
-        // ])->post('https://api.anthropic.com/v1/messages', [
-        //     'model'      => 'claude-haiku-4-5-20251001',
-        //     'max_tokens' => 1024,
-        //     'messages'   => [
-        //         ['role' => 'user', 'content' => $prompt]
-        //     ],
-        // ]);
-        // 
-        // if ($response->successful()) {
-        //     $content = trim($response->json('content.0.text'));
-        // ============================================
-
-        // ============================================
-        // DEVELOPMENT: Groq (free tier)
-        // ============================================
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -500,7 +376,6 @@ Respond ONLY with a valid JSON array matching this exact schema, do not include 
 
         if ($response->successful()) {
             $content = trim($response->json('choices.0.message.content'));
-        // ============================================
             
             // Sometimes models return ```json ... ``` despite instructions
             if (str_starts_with($content, '```json')) {
@@ -643,7 +518,6 @@ Data:
 {$dataContext}
 ";
 
-        // DEVELOPMENT: Groq
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -693,7 +567,6 @@ Data:
     {
         $app = $interview->application;
 
-        // Get past interview history for this user
         $pastInterviews = $user->jobInterviews()
             ->where('outcome', '!=', 'pending')
             ->where('id', '!=', $interview->id)
@@ -729,7 +602,6 @@ Data:
             Be specific to this exact role and company. Max 400 words.
         ";
 
-        // DEVELOPMENT: Groq
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -748,7 +620,6 @@ Data:
         $prep = $response->json('choices.0.message.content')
             ?? 'Research the company thoroughly and prepare examples using the STAR method.';
 
-        // Save to interview record
         $interview->update(['ai_prep' => $prep]);
 
         return $prep;
@@ -796,7 +667,6 @@ Data:
             Do NOT use generic phrases like 'I am writing to express my interest'.
         ";
 
-        // DEVELOPMENT: Groq
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
             'Content-Type'  => 'application/json',
@@ -847,7 +717,6 @@ Data:
                 Note: Base this on general knowledge — be honest if you're uncertain about specifics.
             ";
 
-            // DEVELOPMENT: Groq
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . config('services.groq.key'),
                 'Content-Type'  => 'application/json',
@@ -955,12 +824,10 @@ Data:
         $cvSummary      = $cv->getSummaryForAi();
         $jobDescription = $this->fetchJobDescription($job->job_url);
 
-        // ── Step 2: Fall back to notes if URL fetch failed ──
         if (empty($jobDescription) && $job->notes) {
             $jobDescription = $job->notes;
         }
 
-        // ── Step 3: Fall back to title + company only ──
         $jobDescriptionSource = 'title_only';
         if (!empty($jobDescription)) {
             $jobDescriptionSource = ($job->job_url && str_contains($jobDescription, ' '))
@@ -972,7 +839,6 @@ Data:
                 . ($job->is_remote ? ' Remote position.' : '');
         }
 
-        // ── Step 4: Score ──
         $prompt = "
             You are an ATS (Applicant Tracking System) and career coach.
             Analyze how well this candidate's CV matches the job.
@@ -980,36 +846,13 @@ Data:
             JOB:
             Company: {$job->company_name}
             Role: {$job->role_title}
-            Location: " . ($job->location ?? 'Not specified') . "
-            Remote: " . ($job->is_remote ? 'Yes' : 'No') . "
-
-            JOB DESCRIPTION (from posting):
+            JOB DESCRIPTION:
             {$jobDescription}
 
             CANDIDATE CV:
             {$cvSummary}
 
-            Respond ONLY with valid JSON. No markdown. No preamble:
-            {
-              \"score\": 78,
-              \"verdict\": \"Strong Match\",
-              \"summary\": \"2-3 sentence honest assessment\",
-              \"matching_skills\": [\"skill1\", \"skill2\"],
-              \"missing_skills\": [\"skill3\", \"skill4\"],
-              \"strengths\": [\"3 specific strengths for this role\"],
-              \"gaps\": [\"2-3 honest gaps or concerns\"],
-              \"recommendation\": \"Apply confidently\",
-              \"cv_tips_for_this_role\": [\"tip1\", \"tip2\", \"tip3\"],
-              \"job_description_source\": \"url_fetched\"
-            }
-
-            For job_description_source use:
-            - \"url_fetched\" if you had real job posting content
-            - \"notes\" if from user notes
-            - \"title_only\" if only title/company available
-
-            Score guide: 90-100=Perfect, 75-89=Strong, 60-74=Good, 40-59=Fair, below 40=Weak
-            Be honest. Do not inflate scores. Use the actual job description to find specific matches.
+            Respond ONLY with valid JSON. No markdown. No preamble.
         ";
 
         $response = Http::withHeaders([
@@ -1021,7 +864,7 @@ Data:
             'messages'   => [
                 [
                     'role'    => 'system',
-                    'content' => 'You are an honest ATS scoring system. Respond ONLY with valid JSON. No markdown.',
+                    'content' => 'You are an honest ATS scoring system. Respond ONLY with valid JSON.',
                 ],
                 ['role' => 'user', 'content' => $prompt],
             ],
@@ -1034,29 +877,26 @@ Data:
         $analysis = json_decode($jsonStr, true);
 
         if (!$analysis || !isset($analysis['score'])) {
-            Log::error('ATS JSON parse failed: ' . $content);
             $analysis = [
-                'score'                  => 0,
-                'verdict'                => 'Analysis failed',
-                'summary'                => 'Could not analyze. Please try again.',
-                'matching_skills'        => [],
-                'missing_skills'         => [],
-                'strengths'              => [],
-                'gaps'                   => [],
-                'recommendation'         => 'Try again',
-                'cv_tips_for_this_role'  => [],
+                'score' => 0,
+                'verdict' => 'Analysis failed',
+                'summary' => 'Could not analyze.',
+                'matching_skills' => [],
+                'missing_skills' => [],
+                'strengths' => [],
+                'gaps' => [],
+                'recommendation' => 'Try again',
+                'cv_tips_for_this_role' => [],
                 'job_description_source' => 'error',
             ];
         }
 
-        // Ensure source is always present (AI may omit it)
         if (empty($analysis['job_description_source'])) {
             $analysis['job_description_source'] = $jobDescriptionSource;
         }
 
-        // Save to job application
         $job->update([
-            'ats_score'       => $analysis['score'],
+            'ats_score'       => $analysis['score'] ?? 0,
             'ats_analysis'    => $analysis,
             'ats_analyzed_at' => now(),
         ]);
@@ -1066,28 +906,7 @@ Data:
 
     public function improveCv(UserCv $cv): array
     {
-        $prompt = "
-            Review this CV and give specific, actionable improvement suggestions.
-            Respond ONLY with valid JSON:
-            {
-              \"overall_score\": 72,
-              \"summary_feedback\": \"2-3 sentence overall assessment\",
-              \"sections\": [
-                {
-                  \"section\": \"Professional Summary\",
-                  \"score\": 65,
-                  \"issue\": \"What's wrong or missing\",
-                  \"suggestion\": \"Specific fix with example\"
-                }
-              ],
-              \"quick_wins\": [\"3 things to fix today that have biggest impact\"],
-              \"missing_sections\": [\"sections that should be added\"],
-              \"ats_keywords_to_add\": [\"keywords missing that ATS systems look for\"]
-            }
-
-            CV TEXT:
-            {$cv->raw_text}
-        ";
+        $prompt = "Review this CV and give specific, actionable improvement suggestions. Respond ONLY with valid JSON.";
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . config('services.groq.key'),
@@ -1096,11 +915,8 @@ Data:
             'model'      => 'llama-3.3-70b-versatile',
             'max_tokens' => 1000,
             'messages'   => [
-                [
-                    'role'    => 'system',
-                    'content' => 'You are a professional CV coach. Respond ONLY with valid JSON.',
-                ],
-                ['role' => 'user', 'content' => $prompt],
+                ['role'    => 'system', 'content' => 'You are a professional CV coach. Respond ONLY with valid JSON.'],
+                ['role' => 'user', 'content' => $prompt . "\nCV TEXT:\n" . $cv->raw_text],
             ],
         ]);
 
@@ -1124,12 +940,10 @@ Data:
             if ($response->successful()) {
                 $html = $response->body();
                 
-                // 1. Try to find JobPosting JSON-LD
                 if (preg_match_all('/<script type="application\/ld\+json">(.*?)<\/script>/s', $html, $matches)) {
                     foreach ($matches[1] as $match) {
                         $json = json_decode(trim($match), true);
                         if (isset($json['@type'])) {
-                            // Can be JobPosting or an array with JobPosting
                             $types = is_array($json['@type']) ? $json['@type'] : [$json['@type']];
                             if (in_array('JobPosting', $types) && isset($json['description'])) {
                                 return strip_tags(str_replace(['<br>', '<p>', '<li>'], ["\n", "\n\n", "\n• "], $json['description']));
@@ -1138,7 +952,6 @@ Data:
                     }
                 }
 
-                // 2. Fallback: Clean HTML and use LLM to extract
                 $text = preg_replace('/<script\b[^>]*>([\s\S]*?)<\/script>/i', '', $html);
                 $text = preg_replace('/<style\b[^>]*>([\s\S]*?)<\/style>/i', '', $text);
                 $text = strip_tags($text);
@@ -1158,35 +971,18 @@ Data:
     {
         if (strlen($rawText) < 100) return $rawText;
 
-        $prompt = "
-            The following is scraped text from a job posting website. 
-            Extract ONLY the relevant job description, requirements, and company info.
-            Strip all CSS, JS snippets, navigation menus, and footers.
-            If the text is garbage or doesn't look like a job posting, return an empty string.
-            Keep the formatting clean and professional.
-            
-            SCRAPED TEXT:
-            {$rawText}
-        ";
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.groq.key'),
+            'Content-Type'  => 'application/json',
+        ])->post('https://api.groq.com/openai/v1/chat/completions', [
+            'model'      => 'llama-3.1-8b-instant',
+            'max_tokens' => 1000,
+            'messages'   => [
+                ['role' => 'system', 'content' => 'You extract job descriptions from messy scraped text.'],
+                ['role' => 'user', 'content' => "Extract ONLY the relevant job details from this text:\n\n" . $rawText],
+            ],
+        ]);
 
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . config('services.groq.key'),
-                'Content-Type'  => 'application/json',
-            ])->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model'      => 'llama-3.1-8b-instant', // Faster model for cleaning
-                'max_tokens' => 1000,
-                'messages'   => [
-                    ['role' => 'system', 'content' => 'You extract job descriptions from messy scraped text.'],
-                    ['role' => 'user', 'content' => $prompt],
-                ],
-            ]);
-
-            return $response->json('choices.0.message.content') ?? substr($rawText, 0, 3000);
-        } catch (\Exception $e) {
-            return substr($rawText, 0, 3000);
-        }
+        return $response->json('choices.0.message.content') ?? substr($rawText, 0, 3000);
     }
 }
-
-
