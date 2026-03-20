@@ -18,23 +18,33 @@ class CompletionController extends Controller
     {
         $today = now()->toDateString();
         $user = $request->user();
-        $completion = $habit->completions()->firstOrCreate(
-        ['completed_at' => $today],
-        ['user_id' => $user->id, 'count' => 0, 'is_done' => false]
-        );
+        // Find existing completion or prepare for creation
+        $completion = $habit->completions()->whereDate('completed_at', $today)->first();
+
+        $wasDone = $completion ? $completion->is_done : false;
+
+        if ($completion) {
+            // Toggle existing
+            $completion->update([
+                'is_done' => !$completion->is_done,
+                'count'   => !$completion->is_done ? $habit->repeat_count : 0,
+            ]);
+        } else {
+            // Create new for today
+            $completion = Completion::create([
+                'habit_id'     => $habit->id,
+                'user_id'      => $user->id,
+                'completed_at' => today(),
+                'is_done'      => true,
+                'count'        => $habit->repeat_count === 1 ? 1 : $habit->repeat_count, // Toggling usually means "done"
+            ]);
+        }
 
         $wasFirstToday = !$user->completions()
             ->whereDate('completed_at', $today)
             ->where('is_done', true)
             ->where('habit_id', '!=', $habit->id)
             ->exists();
-
-        $wasDone = $completion->is_done;
-
-        $completion->update([
-            'is_done' => !$completion->is_done,
-            'count' => !$completion->is_done ? $habit->repeat_count : 0,
-        ]);
 
         $alreadyAwarded = \App\Models\XpLog::where('user_id', $user->id)
             ->where('source_type', 'habit')

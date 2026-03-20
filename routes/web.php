@@ -207,6 +207,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // AI endpoints for Jobs
     Route::post('/jobs/{jobApplication}/cover-letter',     [JobApplicationController::class, 'generateCoverLetter'])->name('jobs.cover-letter');
     Route::post('/jobs/{jobApplication}/research',         [JobApplicationController::class, 'companyResearch'])->name('jobs.research');
+    Route::get('/jobs/{jobApplication}/fetch-description', [JobApplicationController::class, 'fetchDescription'])->name('jobs.fetch-description');
     Route::post('/jobs/{jobApplication}/ats-score',        [CvController::class, 'scoreJob'])->name('cv.score-job');
 
     // Job Interviews

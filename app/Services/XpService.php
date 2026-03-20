@@ -89,12 +89,13 @@ class XpService
             'source_id'   => $sourceId,
         ]);
 
+        // Strict guard: XP should never go below 0
         $newXp    = max(0, $user->xp - $amount);
         $newLevel = self::levelFromXp($newXp);
 
         $user->update([
             'xp'    => $newXp,
-            'level' => $newLevel,
+            'level' => max(1, $newLevel), // Level should never be below 1
         ]);
 
         $leveledDown = $newLevel < $oldLevel;

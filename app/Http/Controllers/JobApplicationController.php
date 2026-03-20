@@ -179,15 +179,30 @@ class JobApplicationController extends Controller
         }
 
         $this->authorizeApplication($jobApplication, $request->user());
+        $user = $request->user();
 
-        $request->validate([
-            'job_description' => 'required|string|max:5000',
-        ]);
+        $jobDescription = $request->input('job_description');
+
+        // If no description provided, try to fetch from URL if available
+        if (!$jobDescription && $jobApplication->job_url) {
+            $jobDescription = app(AiService::class)->fetchJobDescription($jobApplication->job_url);
+        }
+
+        // Fallback to notes if still empty
+        if (!$jobDescription && $jobApplication->notes) {
+            $jobDescription = $jobApplication->notes;
+        }
+
+        if (!$jobDescription) {
+            return response()->json([
+                'error' => 'Job description is required. Please paste it or ensure the job has a valid URL.'
+            ], 422);
+        }
 
         $coverLetter = app(AiService::class)->generateCoverLetter(
-            $request->user(),
+            $user,
             $jobApplication,
-            $request->job_description
+            $jobDescription
         );
 
         return response()->json(['cover_letter' => $coverLetter]);
@@ -212,6 +227,23 @@ class JobApplicationController extends Controller
         );
 
         return response()->json(['research' => $research]);
+    }
+
+    public function fetchDescription(Request $request, JobApplication $jobApplication)
+    {
+        $this->authorizeApplication($jobApplication, $request->user());
+
+        if (!$jobApplication->job_url) {
+            return response()->json(['error' => 'No job URL found for this application.'], 422);
+        }
+
+        $description = app(AiService::class)->fetchJobDescription($jobApplication->job_url);
+
+        if (!$description) {
+            return response()->json(['error' => 'Could not fetch description from URL. Please paste it manually.'], 422);
+        }
+
+        return response()->json(['description' => $description]);
     }
 
     private function authorizeApplication(JobApplication $app, $user): void

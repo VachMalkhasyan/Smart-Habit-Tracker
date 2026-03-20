@@ -168,6 +168,30 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
+    Route::post('/extension/jobs', function (Request $request) {
+        $user = $request->user();
+        
+        $request->validate([
+            'company_name' => 'required|string|max:255',
+            'role_title'   => 'required|string|max:255',
+            'job_url'      => 'nullable|url',
+            'status'       => 'required|in:wishlist,applied,phone_screen,interview,offer,rejected,withdrawn',
+            'priority'     => 'required|integer|in:1,2,3',
+        ]);
+
+        $application = $user->jobApplications()->create($request->all());
+
+        if ($request->status === 'applied') {
+            XpService::award($user, 10, "Applied to {$application->company_name} 💼", 'job_application', $application->id);
+        }
+
+        return response()->json([
+            'success'     => true,
+            'application' => $application,
+            'xp_progress' => XpService::progressToNextLevel($user->fresh()),
+        ]);
+    });
+
 });
 
 Route::post('/extension/token', function (Request $request) {

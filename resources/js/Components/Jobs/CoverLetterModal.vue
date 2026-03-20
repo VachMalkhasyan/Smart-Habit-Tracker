@@ -14,16 +14,32 @@
                 </p>
 
                 <div v-show="!coverLetter">
-                    <textarea 
-                        v-model="jobDescription" 
-                        rows="8" 
-                        placeholder="Paste job description here..."
-                        class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
-                        :disabled="generating"
-                    ></textarea>
+                    <div class="relative">
+                        <textarea 
+                            v-model="jobDescription" 
+                            rows="8" 
+                            placeholder="Paste job description here..."
+                            class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm"
+                            :disabled="generating || fetching"
+                        ></textarea>
+                        
+                        <div v-if="fetching" class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex flex-col items-center justify-center rounded-md backdrop-blur-[1px]">
+                            <RefreshCwIcon class="w-8 h-8 text-indigo-500 animate-spin mb-2" />
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-200">Fetching description from URL...</span>
+                        </div>
+                    </div>
 
-                    <div class="mt-4 flex justify-end">
-                        <PrimaryButton @click="generate" :disabled="!jobDescription.trim() || generating">
+                    <div class="mt-4 flex justify-between items-center">
+                        <div>
+                            <button v-if="job?.job_url" 
+                                @click="fetchDescription" 
+                                :disabled="fetching || generating"
+                                class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                                <RefreshCwIcon class="w-3 h-3" :class="{ 'animate-spin': fetching }" />
+                                Re-fetch from URL
+                            </button>
+                        </div>
+                        <PrimaryButton @click="generate" :disabled="!jobDescription.trim() || generating || fetching">
                             <span v-if="generating" class="flex items-center gap-2">
                                 <span class="animate-pulse">✨</span> Generating...
                             </span>
@@ -85,15 +101,43 @@ const copied = ref(false)
 
 watch(() => props.show, (newVal) => {
     if (newVal) {
-        jobDescription.value = ''
+        jobDescription.value = props.job?.notes || ''
         coverLetter.value = ''
         copied.value = false
+        
+        // Auto-fetch if we have a URL and no content in notes
+        if (props.job?.job_url && !props.job?.notes) {
+            fetchDescription()
+        }
     }
 })
 
 const renderedMarkdown = computed(() => {
     return coverLetter.value ? marked(coverLetter.value) : ''
 })
+
+const fetching = ref(false)
+
+const fetchDescription = async () => {
+    if (!props.job?.job_url) return
+    
+    fetching.value = true
+    try {
+        const response = await axios.get(route('jobs.fetch-description', props.job.id))
+        jobDescription.value = response.data.description
+        toast.success('Job description fetched! ✨')
+        
+        // Auto-generate after successful fetch
+        if (jobDescription.value.trim()) {
+            generate()
+        }
+    } catch (error) {
+        toast.error('Could not fetch description from URL')
+        console.error(error)
+    } finally {
+        fetching.value = false
+    }
+}
 
 const generate = async () => {
     if (!jobDescription.value.trim() || !props.job) return
@@ -105,7 +149,8 @@ const generate = async () => {
         })
         coverLetter.value = response.data.cover_letter
     } catch (error) {
-        toast.error('Failed to generate cover letter')
+        const message = error.response?.data?.error || 'Failed to generate cover letter'
+        toast.error(message)
         console.error(error)
     } finally {
         generating.value = false

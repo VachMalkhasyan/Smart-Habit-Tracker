@@ -61,12 +61,16 @@ class AnalyticsController extends Controller
         $habitStats = $user->habits()
             ->with(['completions' => fn($q) => $q->where('completed_at', '>=', $startDate)])
             ->get()
-            ->map(function ($habit) {
-                $total = $habit->completions->count();
-                $done  = $habit->completions->where('is_done', true)->count();
+            ->map(function ($habit) use ($startDate) {
+                $done = $habit->completions->where('is_done', true)->count();
+                
+                // Denom should be days habit was active within the period
+                $effectiveStart = $habit->start_date->max(Carbon::parse($startDate));
+                $daysActive = $effectiveStart->diffInDays(now()) + 1;
+                
                 return [
                     'name'            => $habit->name,
-                    'completion_rate' => $total > 0 ? round(($done / $total) * 100) : 0,
+                    'completion_rate' => $daysActive > 0 ? round(($done / $daysActive) * 100) : 0,
                     'current_streak'  => $habit->current_streak,
                     'longest_streak'  => $habit->longest_streak,
                     'total_completions' => $done,
