@@ -28,13 +28,12 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         $user = User::create([
-            'name'     => $input['name'],
-            'email'    => $input['email'],
-            'password' => Hash::make($input['password']),
-            'plan'     => 'max',
+            'name'              => $input['name'],
+            'email'             => $input['email'],
+            'password'          => Hash::make($input['password']),
+            'plan'              => 'max',
+            'email_verified_at' => now(),
         ]);
-
-        EmailVerificationCodeController::sendCode($user);
 
         return $user;
     }
