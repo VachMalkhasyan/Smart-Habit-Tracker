@@ -953,29 +953,7 @@ Data:
     public function scoreJobFit(UserCv $cv, JobApplication $job): array
     {
         $cvSummary      = $cv->getSummaryForAi();
-        $jobDescription = '';
-
-        // ── Step 1: Try to fetch from job URL ──
-        if ($job->job_url) {
-            try {
-                $response = Http::timeout(10)
-                    ->withHeaders([
-                        'User-Agent' => 'Mozilla/5.0 (compatible; GrowthZone/1.0)',
-                    ])
-                    ->get($job->job_url);
-
-                if ($response->successful()) {
-                    $html = $response->body();
-                    $text = strip_tags($html);
-                    $text = preg_replace('/\s+/', ' ', $text);
-                    $text = trim($text);
-                    // First 3000 chars is enough to cover any job description
-                    $jobDescription = substr($text, 0, 3000);
-                }
-            } catch (\Exception $e) {
-                Log::info("Could not fetch job URL for ATS: {$job->job_url}");
-            }
-        }
+        $jobDescription = $this->fetchJobDescription($job->job_url);
 
         // ── Step 2: Fall back to notes if URL fetch failed ──
         if (empty($jobDescription) && $job->notes) {
@@ -1130,6 +1108,84 @@ Data:
         $clean   = preg_replace('/```json|```/', '', $content);
 
         return json_decode(trim($clean), true) ?? [];
+    }
+
+    public function fetchJobDescription(?string $url): string
+    {
+        if (!$url) return '';
+
+        try {
+            $response = Http::timeout(10)
+                ->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                ])
+                ->get($url);
+
+            if ($response->successful()) {
+                $html = $response->body();
+                
+                // 1. Try to find JobPosting JSON-LD
+                if (preg_match_all('/<script type="application\/ld\+json">(.*?)<\/script>/s', $html, $matches)) {
+                    foreach ($matches[1] as $match) {
+                        $json = json_decode(trim($match), true);
+                        if (isset($json['@type'])) {
+                            // Can be JobPosting or an array with JobPosting
+                            $types = is_array($json['@type']) ? $json['@type'] : [$json['@type']];
+                            if (in_array('JobPosting', $types) && isset($json['description'])) {
+                                return strip_tags(str_replace(['<br>', '<p>', '<li>'], ["\n", "\n\n", "\n• "], $json['description']));
+                            }
+                        }
+                    }
+                }
+
+                // 2. Fallback: Clean HTML and use LLM to extract
+                $text = preg_replace('/<script\b[^>]*>([\s\S]*?)<\/script>/i', '', $html);
+                $text = preg_replace('/<style\b[^>]*>([\s\S]*?)<\/style>/i', '', $text);
+                $text = strip_tags($text);
+                $text = preg_replace('/\s+/', ' ', $text);
+                $text = trim($text);
+
+                return $this->cleanScrapedText(substr($text, 0, 8000));
+            }
+        } catch (\Exception $e) {
+            Log::info("Could not fetch job description from URL: {$url}");
+        }
+
+        return '';
+    }
+
+    public function cleanScrapedText(string $rawText): string
+    {
+        if (strlen($rawText) < 100) return $rawText;
+
+        $prompt = "
+            The following is scraped text from a job posting website. 
+            Extract ONLY the relevant job description, requirements, and company info.
+            Strip all CSS, JS snippets, navigation menus, and footers.
+            If the text is garbage or doesn't look like a job posting, return an empty string.
+            Keep the formatting clean and professional.
+            
+            SCRAPED TEXT:
+            {$rawText}
+        ";
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . config('services.groq.key'),
+                'Content-Type'  => 'application/json',
+            ])->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model'      => 'llama-3.1-8b-instant', // Faster model for cleaning
+                'max_tokens' => 1000,
+                'messages'   => [
+                    ['role' => 'system', 'content' => 'You extract job descriptions from messy scraped text.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+            ]);
+
+            return $response->json('choices.0.message.content') ?? substr($rawText, 0, 3000);
+        } catch (\Exception $e) {
+            return substr($rawText, 0, 3000);
+        }
     }
 }
 

@@ -40,81 +40,47 @@
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" data-tab="timer">🍅 Timer</button>
+            <button class="tab active" data-tab="jobs">💼 Jobs</button>
             <button class="tab" data-tab="habits">
                 ✅ Habits
                 <span id="notif-badge" class="notif-tab-badge hidden">0</span>
             </button>
-            <button class="tab" data-tab="jobs">💼 Jobs</button>
         </div>
 
-        <!-- Timer tab -->
-        <div id="tab-timer" class="tab-content">
-            <div class="timer-display">
-                <div id="timer-time" class="timer-time">25:00</div>
-                <div id="timer-mode" class="timer-mode">Focus time</div>
-            </div>
-
-            <div id="sync-banner" class="hidden" style="font-size:11px; color:#4f46e5; text-align:center; padding:4px; margin-bottom:8px; background:#eef2ff; border-radius:6px;">
-            </div>
-
-            <div class="timer-controls">
-                <button id="btn-reset" class="btn-icon">↩</button>
-                <button id="btn-toggle" class="btn btn-primary btn-lg">▶</button>
-                <button id="btn-skip"  class="btn-icon">⏭</button>
-            </div>
-
-            <div class="sessions-row">
-                <span id="session-dots" class="session-dots">○ ○ ○ ○</span>
-            </div>
-
-            <div class="setting-row">
-                <label>Work</label>
-                <input type="number" id="work-min" value="25" min="1" max="120" class="mini-input">
-                <label>min &nbsp; Break</label>
-                <input type="number" id="break-min" value="5" min="1" max="60" class="mini-input">
-                <label>min</label>
-            </div>
-        </div>
-
-        <!-- Habits tab -->
-        <div id="tab-habits" class="tab-content hidden">
-            <div id="habits-loading" class="muted text-center">Loading habits...</div>
-            <div id="habits-list"></div>
-            
-            <div id="dashboard-note-container" class="hidden" style="margin-top: 16px; background: #fffcf0; border: 1px solid #fde68a; border-radius: 8px; padding: 12px;">
-                <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-                    📌 Today's Note
+        <!-- Jobs tab (Scanner included) -->
+        <div id="tab-jobs" class="tab-content">
+            <div id="scanner-section" style="margin-bottom: 16px; background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; padding: 12px;">
+                <div style="font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    🔍 Job Application Scanner
                 </div>
-                <div id="dashboard-note-text" style="font-size: 13px; color: #4b5563; white-space: pre-wrap; word-break: break-word; line-height: 1.5;"></div>
-            </div>
-
-            <div class="mt-2">
-                <a id="open-app" href="http://localhost:8000/dashboard" target="_blank" class="btn btn-outline w-full" style="margin-top: 12px;">
-                    Open Full App →
-                </a>
-            </div>
-
-            <!-- Notifications Section -->
-            <div id="notifications-section" class="hidden" style="margin-top: 16px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                    <div style="font-size:12px; font-weight:700; color:#374151; display:flex; align-items:center; gap:6px;">
-                        🔔 Notifications
-                        <span id="notif-count-label" style="background:#ef4444; color:#fff; font-size:10px; padding:2px 6px; border-radius:999px;">0</span>
+                <p style="font-size:11px; color:#6b7280; margin-bottom:12px;">Scan the current tab for job details (LinkedIn, Indeed, etc.)</p>
+                
+                <div id="scan-results" class="hidden" style="background:#fff; border:1px solid #e5e7eb; border-radius:6px; padding:10px; margin-bottom:12px;">
+                    <div class="field">
+                        <label>Company</label>
+                        <input type="text" id="scan-company" class="input input-sm" />
                     </div>
-                    <button id="btn-mark-all-read" style="font-size:11px; color:#6366f1; background:none; border:none; cursor:pointer; font-weight:600;">Mark all read</button>
+                    <div class="field">
+                        <label>Role</label>
+                        <input type="text" id="scan-role" class="input input-sm" />
+                    </div>
+                    <div class="field">
+                        <label>URL</label>
+                        <input type="text" id="scan-url" class="input input-sm" readonly />
+                    </div>
+                    <button id="btn-save-job" class="btn btn-primary w-full mt-2 btn-sm">Save to GrowthZone</button>
                 </div>
-                <div id="notif-list" style="display:flex; flex-direction:column; gap:6px;"></div>
-            </div>
-        </div>
 
-        <!-- Jobs tab -->
-        <div id="tab-jobs" class="tab-content hidden">
-            <div id="jobs-loading" class="muted text-center">Loading...</div>
+                <div id="scan-status" class="hidden muted text-center" style="font-size:11px; margin-bottom:10px;"></div>
+
+                <button id="btn-start-scan" class="btn btn-outline w-full btn-sm">Scan Current Page</button>
+            </div>
+
+            <div id="jobs-loading" class="muted text-center">Loading stats...</div>
 
             <!-- Stats row -->
             <div id="jobs-stats" class="hidden">
-                <div class="stats-row">
+                <div class="stats-row" style="margin-bottom:12px;">
                     <span id="jobs-applied">0 Applied</span>
                     <span id="jobs-interviewing">0 Interviews</span>
                     <span id="jobs-offers">0 Offers</span>

@@ -71,7 +71,10 @@ class HandleInertiaRequests extends Middleware
                 ? config('plans.' . $request->user()->plan . '.name', 'Free')
                 : 'Free',
             'ai_messages_today' => $request->user()
-                ? $request->user()->aiMessages()->whereDate('ai_messages.created_at', today())->count()
+                ? $request->user()->aiMessages()
+                    ->where('role', 'user')
+                    ->whereDate('ai_messages.created_at', today())
+                    ->count()
                 : 0,
             'habits_active_count' => $request->user()
                 ? $request->user()->habits()->where('status', 'active')->count()

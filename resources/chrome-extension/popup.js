@@ -1,524 +1,321 @@
-const APP_URL = 'http://localhost:8000'
+// State
+let authToken = null;
+let activeTab = 'jobs';
+let habits = [];
+let userData = null;
 
-let timerRunning     = false
-let timerSeconds     = 25 * 60
-let currentMode      = 'work'
-let workMin          = 25
-let breakMin         = 5
-let sessionCount     = 0
-let timerInterval    = null
-let authToken        = null
+const APP_URL = 'http://localhost:8000';
 
-// DOM refs
-const notLoggedIn   = document.getElementById('not-logged-in')
-const mainContent   = document.getElementById('main-content')
-const xpBarWrap     = document.getElementById('xp-bar-wrap')
-const timerTime     = document.getElementById('timer-time')
-const timerMode     = document.getElementById('timer-mode')
-const btnToggle     = document.getElementById('btn-toggle')
-const btnReset      = document.getElementById('btn-reset')
-const btnSkip       = document.getElementById('btn-skip')
-const sessionDots   = document.getElementById('session-dots')
-const workInput     = document.getElementById('work-min')
-const breakInput    = document.getElementById('break-min')
-const habitsList    = document.getElementById('habits-list')
-const xpFill        = document.getElementById('xp-fill')
-const xpText        = document.getElementById('xp-text')
-const xpLevel       = document.getElementById('xp-level')
-const levelBadge    = document.getElementById('level-badge')
-const loginEmail    = document.getElementById('login-email')
-const loginPass     = document.getElementById('login-password')
-const btnLogin      = document.getElementById('btn-login')
-const loginError    = document.getElementById('login-error')
-const noteContainer = document.getElementById('dashboard-note-container')
-const noteText      = document.getElementById('dashboard-note-text')
-const notifBadge    = document.getElementById('notif-badge')
-const notifSection  = document.getElementById('notifications-section')
-const notifList     = document.getElementById('notif-list')
-const notifCount    = document.getElementById('notif-count-label')
+// DOM Elements
+const elNotLoggedIn = document.getElementById('not-logged-in');
+const elMainContent = document.getElementById('main-content');
+const elLoginEmail = document.getElementById('login-email');
+const elLoginPass = document.getElementById('login-password');
+const elBtnLogin = document.getElementById('btn-login');
+const elLoginError = document.getElementById('login-error');
 
-// Init
-document.addEventListener('DOMContentLoaded', async () => {
-    // Restore timer state
-    chrome.storage.local.get(
-        ['timerSeconds','timerEndTime','timerRunning','currentMode','workMin','breakMin','sessionCount','authToken'],
-        async (data) => {
-            if (data.authToken)    authToken    = data.authToken
-            
-            if (data.timerRunning && data.timerEndTime && data.timerEndTime > Date.now()) {
-                timerSeconds = Math.ceil((data.timerEndTime - Date.now()) / 1000)
-            } else {
-                if (data.timerSeconds !== undefined) timerSeconds = data.timerSeconds
-            }
-            if (data.workMin)    { workMin  = data.workMin;  workInput.value  = workMin  }
-            if (data.breakMin)   { breakMin = data.breakMin; breakInput.value = breakMin }
-            if (data.sessionCount) sessionCount = data.sessionCount
-            currentMode = data.currentMode ?? 'work'
-            
-            updateTimerDisplay()
-            updateDots()
-            
-            if (data.timerRunning && timerSeconds > 0) {
-                startLocalInterval(false)
-            } else if (data.timerRunning && timerSeconds <= 0) {
-                // Background alarm already finished it while popup was closed
-                fetchLatestState()
-            }
-            
-            if (authToken) {
-                await syncWithApp()
-            }
+const elTabs = document.querySelectorAll('.tab');
+const elTabContents = document.querySelectorAll('.tab-content');
+
+const elHabitsList = document.getElementById('habits-list');
+const elHabitsLoading = document.getElementById('habits-loading');
+
+const elJobsLoading = document.getElementById('jobs-loading');
+const elJobsStats = document.getElementById('jobs-stats');
+const elJobsApplied = document.getElementById('jobs-applied');
+const elJobsInterviewing = document.getElementById('jobs-interviewing');
+const elJobsOffers = document.getElementById('jobs-offers');
+const elUpcomingInterviews = document.getElementById('upcoming-interviews');
+
+const elXpBar = document.getElementById('xp-bar-wrap');
+const elXpLevel = document.getElementById('xp-level');
+const elXpText = document.getElementById('xp-text');
+const elXpFill = document.getElementById('xp-fill');
+
+const elBtnStartScan = document.getElementById('btn-start-scan');
+const elScanStatus = document.getElementById('scan-status');
+const elScanResults = document.getElementById('scan-results');
+const elScanCompany = document.getElementById('scan-company');
+const elScanRole = document.getElementById('scan-role');
+const elScanUrl = document.getElementById('scan-url');
+const elBtnSaveJob = document.getElementById('btn-save-job');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+    chrome.storage.local.get(['authToken'], (result) => {
+        if (result.authToken) {
+            authToken = result.authToken;
+            showMainContent();
+        } else {
+            showLogin();
         }
-    )
+    });
+});
 
-    await checkAuth()
-    setupTabs()
-    setupTimerEvents()
-    setupLoginForm()
-})
+// Auth
+elBtnLogin.addEventListener('click', async () => {
+    const email = elLoginEmail.value;
+    const password = elLoginPass.value;
 
-async function syncWithApp() {
+    if (!email || !password) return;
+
+    elBtnLogin.disabled = true;
+    elBtnLogin.innerText = 'Connecting...';
+    elLoginError.classList.add('hidden');
+
     try {
-        const res  = await apiGet('/api/extension/pomodoro')
-        const data = await res.json()
+        const response = await fetch(`${APP_URL}/api/extension/token`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
 
-        if (data.has_active_session && data.session) {
-            const session = data.session
+        const data = await response.json();
 
-            workMin      = session.work_minutes
-            breakMin     = session.break_minutes
-            timerSeconds = session.remaining_seconds
-            currentMode  = 'work'
-
-            chrome.storage.local.set({
-                workMin, breakMin, timerSeconds, currentMode
-            })
-
-            updateTimerDisplay()
-            
-            // Auto-start extension timer if an active session is found
-            if (!timerRunning) {
-                startLocalInterval(false)
-            }
-
-            const banner = document.getElementById('sync-banner')
-            if (banner) {
-                banner.textContent = `⚡ Synced with app${session.habit ? ' — ' + session.habit : ''}`
-                banner.classList.remove('hidden')
-                setTimeout(() => banner.classList.add('hidden'), 3000)
-            }
+        if (response.ok) {
+            authToken = data.token;
+            chrome.storage.local.set({ authToken }, () => {
+                showMainContent();
+            });
+        } else {
+            elLoginError.innerText = data.message || 'Login failed';
+            elLoginError.classList.remove('hidden');
         }
-    } catch (e) {
-        console.log('Sync failed', e)
+    } catch (err) {
+        elLoginError.innerText = 'Could not connect to server';
+        elLoginError.classList.remove('hidden');
+    } finally {
+        elBtnLogin.disabled = false;
+        elBtnLogin.innerText = 'Connect Account';
     }
-}
-
-// Auth check
-async function checkAuth() {
-    chrome.storage.local.get('authToken', async (data) => {
-        if (!data.authToken) {
-            showLogin()
-            return
-        }
-        authToken = data.authToken
-        await loadUser()
-    })
-}
+});
 
 function showLogin() {
-    notLoggedIn.classList.remove('hidden')
-    mainContent.classList.add('hidden')
-    xpBarWrap.classList.add('hidden')
+    elNotLoggedIn.classList.remove('hidden');
+    elMainContent.classList.add('hidden');
+    elXpBar.classList.add('hidden');
 }
 
-function showMain() {
-    notLoggedIn.classList.add('hidden')
-    mainContent.classList.remove('hidden')
-    xpBarWrap.classList.remove('hidden')
+function showMainContent() {
+    elNotLoggedIn.classList.add('hidden');
+    elMainContent.classList.remove('hidden');
+    elXpBar.classList.remove('hidden');
+    loadUser(); // Loads habits and stats
+    loadJobs();
 }
 
-// Login form
-function setupLoginForm() {
-    btnLogin.addEventListener('click', async () => {
-        const email    = loginEmail.value.trim()
-        const password = loginPass.value
+// Tabs
+elTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        const target = tab.getAttribute('data-tab');
+        switchTab(target);
+    });
+});
 
-        if (!email || !password) {
-            showError('Please enter email and password')
-            return
-        }
+function switchTab(tabId) {
+    activeTab = tabId;
+    elTabs.forEach(t => {
+        t.classList.toggle('active', t.getAttribute('data-tab') === tabId);
+    });
+    elTabContents.forEach(c => {
+        c.classList.toggle('hidden', c.id !== `tab-${tabId}`);
+    });
 
-        btnLogin.textContent = 'Connecting...'
-        btnLogin.disabled    = true
-        loginError.classList.add('hidden')
-
-        try {
-            const res = await fetch(`${APP_URL}/api/extension/token`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept':       'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            })
-
-            const data = await res.json()
-
-            if (!res.ok) {
-                showError(data.message ?? 'Invalid credentials')
-                return
-            }
-
-            // Save token
-            authToken = data.token
-            chrome.storage.local.set({ authToken })
-
-            loginEmail.value = ''
-            loginPass.value  = ''
-
-            await loadUser()
-
-        } catch (e) {
-            showError('Could not connect to app. Is it running?')
-        } finally {
-            btnLogin.textContent = 'Connect Account'
-            btnLogin.disabled    = false
-        }
-    })
-
-    // Allow Enter key
-    loginPass.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') btnLogin.click()
-    })
+    if (tabId === 'habits') loadUser();
+    if (tabId === 'jobs') loadJobs();
 }
 
-function showError(msg) {
-    loginError.textContent = msg
-    loginError.classList.remove('hidden')
-}
-
-// Load user data
+// User Stats & Habits
 async function loadUser() {
     try {
-        const res = await apiGet('/api/extension/me')
-
-        if (!res.ok) {
-            // Token expired
-            chrome.storage.local.remove('authToken')
-            authToken = null
-            showLogin()
-            return
+        const response = await fetch(`${APP_URL}/api/extension/me`, {
+            headers: { 
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (response.ok) {
+            userData = data;
+            updateXpBar();
+            renderHabits(data.habits || []);
+        } else if (response.status === 401) {
+            chrome.storage.local.remove('authToken');
+            showLogin();
         }
-
-        const data = await res.json()
-        showMain()
-
-        levelBadge.textContent = `Lv.${data.level}`
-        xpLevel.textContent    = `Lv.${data.level}`
-        xpText.textContent     = `${data.xp_progress.progress_xp}/${data.xp_progress.needed_xp} XP`
-        xpFill.style.width     = `${data.xp_progress.percent}%`
-
-        if (data.dashboard_note) {
-            noteContainer.classList.remove('hidden');
-            noteText.textContent = data.dashboard_note;
-        } else {
-            noteContainer.classList.add('hidden');
-            noteText.textContent = '';
-        }
-
-        loadHabits(data.habits)
-        renderNotifications(data.unread_notifications ?? [], data.unread_count ?? 0)
-
-    } catch (e) {
-        showLogin()
-    }
+    } catch (err) {}
 }
 
-function renderNotifications(notifications, count) {
-    if (!notifBadge || !notifSection || !notifList || !notifCount) return
+function updateXpBar() {
+    if (!userData || !userData.xp_progress) return;
+    elXpLevel.innerText = `Lv.${userData.level}`;
+    const progress = userData.xp_progress;
+    elXpText.innerText = `${progress.progress_xp}/${progress.needed_xp} XP`;
+    elXpFill.style.width = `${progress.percent}%`;
+}
 
-    // Update badge on Habits tab
-    if (count > 0) {
-        notifBadge.textContent = count > 9 ? '9+' : count
-        notifBadge.classList.remove('hidden')
-    } else {
-        notifBadge.classList.add('hidden')
+function renderHabits(habitsList) {
+    elHabitsLoading.classList.add('hidden');
+    if (habitsList.length === 0) {
+        elHabitsList.innerHTML = '<div class="muted text-center" style="padding:16px 0">No habits for today</div>';
+        return;
     }
-    notifCount.textContent = count
 
-    // Show/hide section
-    if (notifications.length === 0) {
-        notifSection.classList.add('hidden')
-        return
-    }
-    notifSection.classList.remove('hidden')
-
-    // Render compact rows
-    notifList.innerHTML = notifications.map(n => `
-        <div style="display:flex; align-items:flex-start; gap:8px; padding:8px; background:#f9fafb; border-radius:8px; border-left:3px solid #6366f1;">
-            <span style="font-size:18px; line-height:1;">${n.icon}</span>
-            <div style="flex:1; min-width:0;">
-                <div style="font-size:12px; font-weight:700; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${n.title}</div>
-                <div style="font-size:11px; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${n.message}</div>
+    elHabitsList.innerHTML = habitsList.map(habit => `
+        <div class="habit-item">
+            <div class="habit-info" style="flex:1">
+                <div class="habit-name" style="font-weight:600; font-size:13px;">${habit.name}</div>
+                <div class="habit-meta" style="font-size:11px; color:#6b7280;">${habit.category || 'General'} • ${habit.current_streak} day streak</div>
             </div>
+            <button class="btn-check ${habit.completed_today ? 'checked' : ''}" 
+                    style="width:28px; height:28px; border-radius:6px; border:1px solid #e5e7eb; background:#fff; cursor:pointer;"
+                    data-id="${habit.id}">
+                ${habit.completed_today ? '✓' : ''}
+            </button>
         </div>
-    `).join('')
+    `).join('');
 
-    // Mark all read button
-    const btnMarkAll = document.getElementById('btn-mark-all-read')
-    if (btnMarkAll) {
-        btnMarkAll.onclick = async () => {
-            try {
-                await apiPost('/api/extension/notifications/read-all')
-                notifBadge.classList.add('hidden')
-                notifCount.textContent = '0'
-                notifSection.classList.add('hidden')
-            } catch (e) {
-                console.error('Mark all read failed', e)
+    elHabitsList.querySelectorAll('.btn-check').forEach(btn => {
+        btn.onclick = () => toggleHabit(btn.getAttribute('data-id'), btn);
+    });
+}
+
+async function toggleHabit(id, btn) {
+    try {
+        const response = await fetch(`${APP_URL}/api/extension/habits/${id}/toggle`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json'
+            }
+        });
+        const data = await response.json();
+        if (response.ok) {
+            btn.classList.toggle('checked', data.is_done);
+            btn.innerHTML = data.is_done ? '✓' : '';
+            if (data.xp_progress) {
+                userData.xp_progress = data.xp_progress;
+                userData.level = data.xp_progress.level;
+                updateXpBar();
             }
         }
-    }
+    } catch (err) {}
 }
 
-function loadHabits(habits) {
-    document.getElementById('habits-loading').classList.add('hidden')
-
-    if (!habits || habits.length === 0) {
-        habitsList.innerHTML = '<p class="muted text-center" style="padding:16px 0">No active habits today 🎯</p>'
-        return
-    }
-
-    habitsList.innerHTML = habits.map(h => `
-        <div class="habit-item" data-id="${h.id}">
-            <div class="habit-check ${h.completed_today ? 'done' : ''}" data-id="${h.id}">
-                ${h.completed_today ? '✓' : ''}
-            </div>
-            <span class="habit-name">${h.name}</span>
-            <span class="habit-streak">🔥${h.current_streak}</span>
-        </div>
-    `).join('')
-
-    // Attach event listeners to comply with CSP
-    habitsList.querySelectorAll('.habit-check').forEach(el => {
-        el.addEventListener('click', () => {
-            toggleHabit(el.dataset.id, el)
-        })
-    })
-}
-
-const toggleHabit = async (habitId, el) => {
-    try {
-        const res  = await apiPost(`/api/extension/habits/${habitId}/toggle`)
-        const data = await res.json()
-
-        el.classList.toggle('done', data.is_done)
-        el.innerHTML = data.is_done ? '✓' : ''
-
-        if (data.xp_progress) {
-            xpFill.style.width     = `${data.xp_progress.percent}%`
-            xpText.textContent     = `${data.xp_progress.progress_xp}/${data.xp_progress.needed_xp} XP`
-            xpLevel.textContent    = `Lv.${data.xp_progress.level}`
-            levelBadge.textContent = `Lv.${data.xp_progress.level}`
-        }
-    } catch (e) {
-        console.error('Toggle failed', e)
-    }
-}
-
-// API helpers
-function apiGet(path) {
-    return fetch(`${APP_URL}${path}`, {
-        headers: {
-            'Accept':        'application/json',
-            'Authorization': `Bearer ${authToken}`,
-            'X-Requested-With': 'XMLHttpRequest',
-        }
-    })
-}
-
-function apiPost(path, body = {}) {
-    return fetch(`${APP_URL}${path}`, {
-        method:  'POST',
-        headers: {
-            'Content-Type':  'application/json',
-            'Accept':        'application/json',
-            'Authorization': `Bearer ${authToken}`,
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(body),
-    })
-}
-
-// Timer
-function startLocalInterval(notifyBackground = true) {
-    timerRunning          = true
-    btnToggle.textContent = '⏸'
-    
-    if (notifyBackground) {
-        chrome.runtime.sendMessage({ type: 'START_TIMER', seconds: timerSeconds })
-    }
-    
-    timerInterval = setInterval(() => {
-        timerSeconds--
-        updateTimerDisplay()
-        if (timerSeconds <= 0) {
-            clearInterval(timerInterval)
-            timerInterval = null
-            
-            // Allow background.js 1 second to fire the alarm, sync, and update storage
-            setTimeout(fetchLatestState, 1000)
-        }
-    }, 1000)
-}
-
-function fetchLatestState() {
-    chrome.storage.local.get(['timerSeconds','timerRunning','currentMode','sessionCount'], (data) => {
-        timerRunning = data.timerRunning || false
-        btnToggle.textContent = timerRunning ? '⏸' : '▶'
-        if (data.timerSeconds !== undefined) timerSeconds = data.timerSeconds
-        if (data.sessionCount !== undefined) sessionCount = data.sessionCount
-        if (data.currentMode !== undefined)  currentMode = data.currentMode
-        updateDots()
-        updateTimerDisplay()
-    })
-}
-
-function stopLocalInterval() {
-    timerRunning          = false
-    btnToggle.textContent = '▶'
-    clearInterval(timerInterval)
-    timerInterval = null
-    chrome.runtime.sendMessage({ type: 'STOP_TIMER' })
-}
-
-function sessionDone() {
-    // Fired on 'skip' manual override
-    timerRunning          = false
-    btnToggle.textContent = '▶'
-
-    if (currentMode === 'work') {
-        sessionCount++
-        chrome.storage.local.set({ sessionCount })
-        updateDots()
-        currentMode  = 'break'
-        timerSeconds = breakMin * 60
-    } else {
-        currentMode  = 'work'
-        timerSeconds = workMin * 60
-    }
-
-    chrome.storage.local.set({ currentMode, timerSeconds, timerRunning: false, timerEndTime: 0 })
-    updateTimerDisplay()
-    chrome.runtime.sendMessage({ type: 'STOP_TIMER' })
-}
-
-function updateTimerDisplay() {
-    const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0')
-    const s = Math.floor(timerSeconds % 60).toString().padStart(2, '0')
-    timerTime.textContent = `${m}:${s}`
-    timerMode.textContent = currentMode === 'work' ? 'Focus time 🍅' : 'Break time ☕'
-}
-
-function updateDots() {
-    const filled = sessionCount % 4
-    sessionDots.textContent = Array.from(
-        { length: 4 }, (_, i) => i < filled ? '●' : '○'
-    ).join(' ')
-}
-
-function setupTimerEvents() {
-    btnToggle.addEventListener('click', () => {
-        if (timerRunning) stopLocalInterval()
-        else startLocalInterval()
-    })
-
-    btnReset.addEventListener('click', () => {
-        stopLocalInterval()
-        timerSeconds = (currentMode === 'work' ? workMin : breakMin) * 60
-        updateTimerDisplay()
-        chrome.storage.local.set({ timerSeconds })
-    })
-
-    btnSkip.addEventListener('click', () => {
-        stopLocalInterval()
-        sessionDone()
-    })
-
-    workInput.addEventListener('change', () => {
-        workMin = parseInt(workInput.value) || 25
-        if (!timerRunning && currentMode === 'work') {
-            timerSeconds = workMin * 60
-            updateTimerDisplay()
-        }
-        chrome.storage.local.set({ workMin })
-    })
-
-    breakInput.addEventListener('change', () => {
-        breakMin = parseInt(breakInput.value) || 5
-        if (!timerRunning && currentMode === 'break') {
-            timerSeconds = breakMin * 60
-            updateTimerDisplay()
-        }
-        chrome.storage.local.set({ breakMin })
-    })
-}
-
-function setupTabs() {
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'))
-            tab.classList.add('active')
-            document.getElementById(`tab-${tab.dataset.tab}`).classList.remove('hidden')
-
-            // Load habits when switching to habits tab
-            if (tab.dataset.tab === 'habits') loadUser()
-        })
-    })
-}
-
+// Jobs
 async function loadJobs() {
-    document.getElementById('jobs-loading').classList.remove('hidden')
+    elJobsLoading.classList.remove('hidden');
     try {
-        const res  = await apiGet('/api/extension/jobs')
-        const data = await res.json()
+        const response = await fetch(`${APP_URL}/api/extension/jobs`, {
+            headers: { 
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        const data = await response.json();
+        if (response.ok) {
+            elJobsApplied.innerText = `${data.stats.applied} Applied`;
+            elJobsInterviewing.innerText = `${data.stats.interviewing} Interviews`;
+            elJobsOffers.innerText = `${data.stats.offers} Offers`;
+            elJobsStats.classList.remove('hidden');
 
-        document.getElementById('jobs-loading').classList.add('hidden')
-        document.getElementById('jobs-stats').classList.remove('hidden')
-
-        document.getElementById('jobs-applied').textContent =
-            `${data.stats.applied} Applied`
-        document.getElementById('jobs-interviewing').textContent =
-            `${data.stats.interviewing} Interviews`
-        document.getElementById('jobs-offers').textContent =
-            `${data.stats.offers} Offers`
-
-        const container = document.getElementById('upcoming-interviews')
-        if (data.upcoming_interviews.length === 0) {
-            container.innerHTML =
-                '<p class="muted text-center" style="padding:8px 0">No upcoming interviews</p>'
-        } else {
-            container.innerHTML = data.upcoming_interviews.map(i => `
-                <div class="habit-item">
-                    <div class="habit-check done">🗓️</div>
-                    <div style="flex:1">
-                        <p class="habit-name">${i.type} — ${i.company}</p>
-                        <p class="muted">${new Date(i.scheduled_at)
-                            .toLocaleDateString('en-US', {
-                                weekday: 'short', month: 'short',
-                                day: 'numeric', hour: '2-digit', minute: '2-digit'
-                            })}</p>
-                    </div>
-                    ${i.has_prep ? '<span style="color:#4f46e5;font-size:11px">AI Ready ✓</span>' : ''}
-                </div>
-            `).join('')
+            if (data.upcoming_interviews && data.upcoming_interviews.length > 0) {
+                elUpcomingInterviews.innerHTML = '<div style="font-size:11px; font-weight:700; color:#374151; margin:12px 0 8px;">Upcoming Interviews</div>' + 
+                    data.upcoming_interviews.map(iv => `
+                        <div style="background:#f3f4f6; border-radius:6px; padding:8px; margin-bottom:6px;">
+                            <div style="font-size:12px; font-weight:600;">${iv.company}</div>
+                            <div style="font-size:10px; color:#6b7280;">${new Date(iv.scheduled_at).toLocaleDateString()}</div>
+                        </div>
+                    `).join('');
+            } else {
+                elUpcomingInterviews.innerHTML = '';
+            }
         }
-    } catch (e) {
-        document.getElementById('jobs-loading').textContent = 'Failed to load jobs'
+    } catch (err) {
+    } finally {
+        elJobsLoading.classList.add('hidden');
     }
 }
 
-// Call loadJobs when jobs tab is clicked
-document.querySelector('[data-tab="jobs"]')
-    .addEventListener('click', loadJobs)
+// Job Scanner
+elBtnStartScan.addEventListener('click', async () => {
+    elScanStatus.innerText = 'Scanning page...';
+    elScanStatus.classList.remove('hidden');
+    elScanResults.classList.add('hidden');
+    elBtnStartScan.disabled = true;
 
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        
+        const results = await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ['scanner.js']
+        });
+
+        if (results && results[0] && results[0].result) {
+            const data = results[0].result;
+            elScanCompany.value = data.company || '';
+            elScanRole.value = data.role || '';
+            elScanUrl.value = data.url || '';
+            
+            elScanResults.classList.remove('hidden');
+            elScanStatus.classList.add('hidden');
+        } else {
+            elScanStatus.innerText = 'No job data found on this page.';
+        }
+    } catch (err) {
+        elScanStatus.innerText = 'Scan failed: ' + err.message;
+    } finally {
+        elBtnStartScan.disabled = false;
+    }
+});
+
+elBtnSaveJob.addEventListener('click', async () => {
+    const jobData = {
+        company_name: elScanCompany.value,
+        role_title: elScanRole.value,
+        job_url: elScanUrl.value,
+        status: 'wishlist',
+        priority: 2
+    };
+
+    if (!jobData.company_name || !jobData.role_title) {
+        alert('Company and Role are required');
+        return;
+    }
+
+    elBtnSaveJob.disabled = true;
+    elBtnSaveJob.innerText = 'Saving...';
+
+    try {
+        const response = await fetch(`${APP_URL}/api/extension/jobs`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(jobData)
+        });
+
+        if (response.ok) {
+            elScanStatus.innerText = 'Job saved successfully! 💼';
+            elScanStatus.classList.remove('hidden');
+            elScanResults.classList.add('hidden');
+            loadJobs();
+            loadUser(); // Refresh XP
+        } else {
+            const errData = await response.json();
+            alert('Failed to save: ' + (errData.message || 'Unknown error'));
+        }
+    } catch (err) {
+        alert('Connection error');
+    } finally {
+        elBtnSaveJob.disabled = false;
+        elBtnSaveJob.innerText = 'Save to GrowthZone';
+    }
+});

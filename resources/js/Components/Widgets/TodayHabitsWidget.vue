@@ -110,6 +110,10 @@ const priorityClass = (p) => ({
 const priorityLabel = (p) => ({ 1: 'High', 2: 'Medium', 3: 'Low' }[p] ?? '')
 
 const toggleHabit = (habit) => {
-    router.post(route('completions.toggle', habit.id), {}, { preserveScroll: true })
+    if (habit.repeat_count > 1 && !habit.is_done_today) {
+        router.post(route('completions.increment', habit.id), {}, { preserveScroll: true })
+    } else {
+        router.post(route('completions.toggle', habit.id), {}, { preserveScroll: true })
+    }
 }
 </script>

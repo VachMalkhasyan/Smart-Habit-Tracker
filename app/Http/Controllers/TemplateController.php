@@ -49,8 +49,22 @@ class TemplateController extends Controller
 
     private function matchCategory(string $categoryName, User $user): ?int
     {
-        return HabitCategory::where('name', $categoryName)
+        $category = HabitCategory::where('name', $categoryName)
             ->where(fn($q) => $q->whereNull('user_id')->orWhere('user_id', $user->id))
-            ->first()?->id;
+            ->first();
+
+        if ($category) {
+            return $category->id;
+        }
+
+        // Auto-create category if missing
+        $newCategory = HabitCategory::create([
+            'user_id' => $user->id,
+            'name'    => $categoryName,
+            'color'   => '#6366f1', // Default indigo
+            'icon'    => 'Sparkles',
+        ]);
+
+        return $newCategory->id;
     }
 }

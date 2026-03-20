@@ -48,6 +48,7 @@ return [
         'ats_scoring'         => false,
         'cover_letter'        => true,
         'company_research'    => true,
+        'ai_interview_prep'   => true,
     ],
 
     'max' => [
@@ -72,6 +73,7 @@ return [
         'ats_scoring'         => true,
         'cover_letter'        => true,
         'company_research'    => true,
+        'ai_interview_prep'   => true,
     ],
 
 ];

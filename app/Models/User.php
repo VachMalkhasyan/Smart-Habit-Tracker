@@ -51,6 +51,15 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * Default attribute values.
+     *
+     * @var array
+     */
+    protected $attributes = [
+        'plan' => 'max',
+    ];
+
+    /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
@@ -89,6 +98,15 @@ class User extends Authenticatable implements MustVerifyEmail
             'last_weekly_summary'  => 'array',
             'last_weekly_summary_date' => 'date',
         ];
+    }
+
+    protected static function booted()
+    {
+        static::saving(function ($user) {
+            if ($user->isDirty('xp') && $user->xp < 0) {
+                $user->xp = 0;
+            }
+        });
     }
     public function habits(): HasMany
     {

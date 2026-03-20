@@ -305,10 +305,10 @@
                         <div class="space-y-2">
                             <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><FileText class="w-4 h-4 text-gray-400"/> Cover Letter</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Generate a custom cover letter tailored to the job description.</p>
-                            <button @click="can('job_cover_letter') ? (showCoverLetterModal = true) : upgradeStore.open('AI Cover Letter', 'pro', 'Generate a professional cover letter tailored perfectly to this job description.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <button @click="can('cover_letter') ? (showCoverLetterModal = true) : upgradeStore.open('AI Cover Letter', 'pro', 'Generate a professional cover letter tailored perfectly to this job description.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
                                 <span class="flex items-center gap-2">
                                     Generate Cover Letter
-                                    <Badge v-if="!can('job_cover_letter')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
+                                    <Badge v-if="!can('cover_letter')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
                                 </span>
                                 <ArrowRight class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1" />
                             </button>
@@ -317,10 +317,10 @@
                         <div class="space-y-2">
                             <h4 class="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-1.5"><Search class="w-4 h-4 text-gray-400"/> Company Research</h4>
                             <p class="text-xs text-gray-500 dark:text-gray-400">Get an AI-generated briefing on the company, culture, and products.</p>
-                            <button @click="can('job_research') ? (showResearchModal = true) : upgradeStore.open('Company Research', 'pro', 'Get detailed AI research on companies to walk into interviews with full confidence.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
+                            <button @click="can('company_research') ? (showResearchModal = true) : upgradeStore.open('Company Research', 'pro', 'Get detailed AI research on companies to walk into interviews with full confidence.')" class="w-full text-left px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-700 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg group transition flex items-center justify-between border border-gray-200 dark:border-gray-700 shadow-sm">
                                 <span class="flex items-center gap-2">
                                     View Research
-                                    <Badge v-if="!can('job_research')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
+                                    <Badge v-if="!can('company_research')" variant="outline" class="text-[8px] h-3.5 px-1 border-indigo-500/30 text-indigo-400">PRO</Badge>
                                 </span>
                                 <ArrowRight class="w-4 h-4 text-gray-400 group-hover:text-indigo-500 transition-transform group-hover:translate-x-1" />
                             </button>
